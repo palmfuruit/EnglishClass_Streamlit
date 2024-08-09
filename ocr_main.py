@@ -108,7 +108,7 @@ def image_to_sentences(image, ocr_model):
         sentences += ocr_lib.split_into_sentences(text)
 
     ### 先頭文字以外を小文字
-    sentences = list(map(str.capitalize, sentences))
+    sentences = list(map(ocr_lib.capitalize, sentences))
     # for s in sentences:
     #     print(s)
 

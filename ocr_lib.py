@@ -42,3 +42,11 @@ def separate_words(text):
     # cleaned_text = re.sub(r'(\.)([A-Za-z])', r'\1 \2', cleaned_text)
 
     return cleaned_text
+
+
+def capitalize(sentence):
+    new_sentence = sentence.capitalize()
+    new_sentence = re.sub(r'\bi\b', 'I', new_sentence)
+    new_sentence = re.sub(r'\bi\'', 'I\'', new_sentence)
+
+    return new_sentence
