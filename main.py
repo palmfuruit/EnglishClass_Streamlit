@@ -8,6 +8,11 @@ ocr_model = ocr_main.initialize_ocr()
 
 if 'sentences' not in st.session_state:
     st.session_state.sentences = []
+    st.session_state.sentences1 = []
+    st.session_state.sentences2 = []
+    st.session_state.sentences3 = []
+    st.session_state.sentences4 = []
+    st.session_state.sentences5 = []
 
 # 処理済みファイルを追跡するためのセットを作成
 if 'processed_files' not in st.session_state:
@@ -18,6 +23,8 @@ image_files = st.file_uploader('画像ファイルを選択してください。
 
 # 未処理のファイルを取り出し
 unprocessed_files = [img for img in image_files if img.name not in st.session_state.processed_files]
+
+
 
 if unprocessed_files:
     overWrite = st.empty()
@@ -41,6 +48,15 @@ if unprocessed_files:
         data = {"text": st.session_state.sentences}
         response = requests.post(api_url, json=data)
         response.raise_for_status()
+        response_data = response.json()
+        st.write(response_data)
+
+        st.session_state.sentences1 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 1]
+        st.session_state.sentences2 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 2]
+        st.session_state.sentences3 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 3]
+        st.session_state.sentences4 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 4]
+        st.session_state.sentences5 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 5]
+
 
 
 sentence_patterns = [
@@ -59,5 +75,18 @@ current_pattern = st.selectbox(
     placeholder = 'どの文型を取り出しますか'
     )
 
+selected_sentences = []
 if current_pattern == '全て':
-    st.write(st.session_state.sentences)
+    selected_sentences = st.session_state.sentences
+elif current_pattern == sentence_patterns[0]:
+    selected_sentences = st.session_state.sentences1
+elif current_pattern == sentence_patterns[1]:
+    selected_sentences = st.session_state.sentences2
+elif current_pattern == sentence_patterns[2]:
+    selected_sentences = st.session_state.sentences3
+elif current_pattern == sentence_patterns[3]:
+    selected_sentences = st.session_state.sentences4
+elif current_pattern == sentence_patterns[4]:
+    selected_sentences = st.session_state.sentences5
+
+st.write(selected_sentences)
