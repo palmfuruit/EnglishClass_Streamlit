@@ -149,6 +149,40 @@ def display_token_info(doc):
     token_df = pd.DataFrame(token_data)
     st.dataframe(token_df)
 
+
+def determine_sentence_pattern(doc):
+    has_subject = False
+    has_object = False
+    has_complement = False
+    has_object_complement = False
+    has_indirect_object = False
+
+    for token in doc:
+        if token.dep_ in ['nsubj', 'csubj', 'nsubjpass', 'csubjpass']:
+            has_subject = True
+        elif token.dep_ in ['obj', 'dobj', 'iobj']:
+            if token.dep_ == 'iobj':
+                has_indirect_object = True
+            else:
+                has_object = True
+        elif token.dep_ in ['attr', 'acomp', 'xcomp']:
+            has_complement = True
+        elif token.dep_ in ['oprd']:
+            has_object_complement = True
+
+    if has_subject and not has_object and not has_complement:
+        return "第1文型 (SV)"
+    elif has_subject and has_complement and not has_object:
+        return "第2文型 (SVC)"
+    elif has_subject and has_object and not has_object_complement and not has_indirect_object:
+        return "第3文型 (SVO)"
+    elif has_subject and has_object and has_indirect_object:
+        return "第4文型 (SVOO)"
+    elif has_subject and has_object and has_object_complement:
+        return "第5文型 (SVOC)"
+    else:
+        return ""
+
 # メイン関数
 def main():
     initialize_session_state()
@@ -169,6 +203,11 @@ def main():
     st.divider() # 水平線
     if selected_text:
         main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, nlp)
+
+        # 文型を判定して表示
+        sentence_pattern = determine_sentence_pattern(doc)
+        st.write(sentence_pattern)
+        
         if subordinate_clause_sentence:
             st.write('<主節>')
             st.markdown(main_clause_sentence, unsafe_allow_html=True)
