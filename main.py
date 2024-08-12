@@ -21,7 +21,6 @@ def process_uploaded_files(image_files, ocr_model):
     unprocessed_files = [img for img in image_files if img.name not in st.session_state.processed_files]
     if unprocessed_files:
         process_images(unprocessed_files, ocr_model)
-        # fetch_prediction()
 
 # 画像の処理
 def process_images(unprocessed_files, ocr_model):
@@ -34,19 +33,10 @@ def process_images(unprocessed_files, ocr_model):
         st.session_state.processed_files.add(img.name)
     overWrite.empty()
 
-# 文型予測を取得
-# def fetch_prediction():
-#     api_url = "http://localhost:8000/predict"
-#     data = {"text": st.session_state.sentences}
-#     response = requests.post(api_url, json=data)
-#     response.raise_for_status()
-#     response_data = response.json()
-
 # SpaCyのセットアップと文の解析
 def setup_spacy():
     return spacy.load('en_core_web_sm')
 
-# トークンのサブツリー（そのトークンを含むすべての子孫ノード）の範囲を取得
 def get_subtree_span(token):
     subtree_tokens = list(token.subtree)
     return subtree_tokens[0].idx, subtree_tokens[-1].idx + len(subtree_tokens[-1].text)
@@ -54,7 +44,26 @@ def get_subtree_span(token):
 def underline_clauses(sentence, nlp):
     doc = nlp(sentence)
     spans = extract_spans(doc)
-    return apply_annotations(sentence, spans), doc
+    overlap = check_for_overlap(spans)
+    
+    if overlap:
+        main_clause_sentence = apply_annotations(sentence, spans, 'main')
+        subordinate_clause_sentence = apply_annotations(sentence, spans, 'subordinate')
+        return main_clause_sentence, subordinate_clause_sentence, doc
+    else:
+        combined_sentence = apply_annotations(sentence, spans)
+        return combined_sentence, None, doc
+
+def check_for_overlap(spans):
+    # 重なるアンダーラインがあるかチェック
+    main_spans = [span for span in spans if span[2] == 'main']
+    subordinate_spans = [span for span in spans if span[2] == 'subordinate']
+    
+    for main_span in main_spans:
+        for sub_span in subordinate_spans:
+            if main_span[0][0] < sub_span[0][1] and sub_span[0][0] < main_span[0][1]:
+                return True
+    return False
 
 def extract_spans(doc):
     spans = []
@@ -75,16 +84,23 @@ def get_span_info(token):
         return get_subtree_span(token), 'complement', 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
     return None, None, None
 
-def apply_annotations(sentence, spans):
+def apply_annotations(sentence, spans, clause_type_filter=None):
     offset_map = [0] * len(sentence)
+    annotated_sentence = sentence
+
     for span, span_type, clause_type in sorted(spans, key=lambda x: x[0][0], reverse=True):
-        color = get_span_color(span_type)
-        max_offset = max(offset_map[span[0]:span[1]]) if offset_map[span[0]:span[1]] else 0
-        style = f"border-bottom: 2px {'solid' if clause_type == 'main' else 'double'} {color}; padding-bottom: {max_offset}px;"
-        sentence = sentence[:span[0]] + f"<span style='{style}'>{sentence[span[0]:span[1]]}</span>" + sentence[span[1]:]
-        for i in range(span[0], span[1]):
-            offset_map[i] += 4
-    return sentence
+        if clause_type_filter is None or clause_type == clause_type_filter:
+            color = get_span_color(span_type)
+            max_offset = max(offset_map[span[0]:span[1]]) if offset_map[span[0]:span[1]] else 0
+            style = f"border-bottom: 2px {'solid' if clause_type == 'main' else 'double'} {color}; padding-bottom: {max_offset}px;"
+            annotated_sentence = (
+                annotated_sentence[:span[0]] +
+                f"<span style='{style}'>{annotated_sentence[span[0]:span[1]]}</span>" +
+                annotated_sentence[span[1]:]
+            )
+            for i in range(span[0], span[1]):
+                offset_map[i] += 4
+    return annotated_sentence
 
 def get_span_color(span_type):
     colors = {
@@ -146,8 +162,14 @@ def main():
 
     st.divider() # 水平線
     if selected_text:
-        underlined_text, doc = underline_clauses(selected_text, nlp)
-        st.markdown(underlined_text, unsafe_allow_html=True)
+        main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, nlp)
+        if subordinate_clause_sentence:
+            st.write('<主節>')
+            st.markdown(main_clause_sentence, unsafe_allow_html=True)
+            st.write('<従属節>')
+            st.markdown(subordinate_clause_sentence, unsafe_allow_html=True)
+        else:
+            st.markdown(main_clause_sentence, unsafe_allow_html=True)
         display_token_info(doc)
 
     # 凡例を表示
