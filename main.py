@@ -4,141 +4,98 @@ from PIL import Image, ImageDraw
 import streamlit as st
 import requests
 import ocr_main
-
-ocr_model = ocr_main.initialize_ocr()
-
-if 'sentences' not in st.session_state:
-    st.session_state.sentences = []
-
-# 処理済みファイルを追跡するためのセットを作成
-if 'processed_files' not in st.session_state:
-    st.session_state.processed_files = set()
-
-# アップロードされた画像の表示とOCR処理
-image_files = st.file_uploader('画像ファイルを選択してください。', type=['jpg', 'jpeg', 'png'], accept_multiple_files=True)
-
-# 未処理のファイルを取り出し
-unprocessed_files = [img for img in image_files if img.name not in st.session_state.processed_files]
-
-
-
-if unprocessed_files:
-    overWrite = st.empty()
-    for idx, img in enumerate(unprocessed_files):
-
-        with overWrite.container():
-            st.write(f'{idx + 1} / {len(unprocessed_files)} 枚目の画像を処理しています・・・。')
-
-        original_image = Image.open(img)
-        # OCR処理を行い、セッションステートのsentencesに結果を追加
-        st.session_state.sentences += ocr_main.image_to_sentences(np.array(original_image), ocr_model)
-
-        # 処理済みのファイル名を保存
-        st.session_state.processed_files.add(img.name)
-
-    else:
-        overWrite.empty()       # 「N枚目の画像を処理しています・・・。」　消去
-
-        # 取得した文章を文型予測した配列を取得
-        api_url = "http://localhost:8000/predict"
-        data = {"text": st.session_state.sentences}
-        response = requests.post(api_url, json=data)
-        response.raise_for_status()
-        response_data = response.json()
-        # st.write(response_data)
-
- 
-
-
-# st.write(st.session_state.sentences)
-# ラジオボタンでテキストを選択
-selected_text = ""
-if st.session_state.sentences:
-    with st.sidebar:
-        selected_text = st.radio("分析する文章を選択してください。", st.session_state.sentences)
-
-
-
 import spacy
 
-# SpaCyの英語モデルをロード
-nlp = spacy.load('en_core_web_sm')
+# OCRモデルの初期化
+ocr_model = ocr_main.initialize_ocr()
 
+# セッションステートの初期化
+def initialize_session_state():
+    if 'sentences' not in st.session_state:
+        st.session_state.sentences = []
+    if 'processed_files' not in st.session_state:
+        st.session_state.processed_files = set()
 
+# ファイルのアップロードとOCR処理
+def process_uploaded_files(image_files, ocr_model):
+    unprocessed_files = [img for img in image_files if img.name not in st.session_state.processed_files]
+    if unprocessed_files:
+        process_images(unprocessed_files, ocr_model)
+        # fetch_prediction()
+
+# 画像の処理
+def process_images(unprocessed_files, ocr_model):
+    overWrite = st.empty()
+    for idx, img in enumerate(unprocessed_files):
+        with overWrite.container():
+            st.write(f'{idx + 1} / {len(unprocessed_files)} 枚目の画像を処理しています・・・。')
+        original_image = Image.open(img)
+        st.session_state.sentences += ocr_main.image_to_sentences(np.array(original_image), ocr_model)
+        st.session_state.processed_files.add(img.name)
+    overWrite.empty()
+
+# 文型予測を取得
+# def fetch_prediction():
+#     api_url = "http://localhost:8000/predict"
+#     data = {"text": st.session_state.sentences}
+#     response = requests.post(api_url, json=data)
+#     response.raise_for_status()
+#     response_data = response.json()
+
+# SpaCyのセットアップと文の解析
+def setup_spacy():
+    return spacy.load('en_core_web_sm')
+
+# トークンのサブツリー（そのトークンを含むすべての子孫ノード）の範囲を取得
 def get_subtree_span(token):
-    # トークンのサブツリー（そのトークンを含むすべての子孫ノード）の範囲を取得
     subtree_tokens = list(token.subtree)
     return subtree_tokens[0].idx, subtree_tokens[-1].idx + len(subtree_tokens[-1].text)
 
-def underline_clauses(sentence):
-    # 文を解析
+def underline_clauses(sentence, nlp):
     doc = nlp(sentence)
-    
+    spans = extract_spans(doc)
+    return apply_annotations(sentence, spans), doc
+
+def extract_spans(doc):
     spans = []
-    offset_map = [0] * len(sentence)  # 文字ごとのずらし量を格納するリスト
-
     for token in doc:
-        if token.pos_ == 'VERB':  # 動詞
-            span = (token.idx, token.idx + len(token.text))
-            clause_type = 'main' if token.dep_ == 'ROOT' else 'subordinate'
-            spans.append((span, 'verb', clause_type))
-        elif token.pos_ == 'AUX':  # 助動詞
-            span = (token.idx, token.idx + len(token.text))
-            clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
-            spans.append((span, 'auxiliary', clause_type))
-        
-        elif token.dep_ in {'nsubj', 'csubj', 'nsubjpass', 'csubjpass'}:  # 主語
-            span = get_subtree_span(token)
-            clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
-            spans.append((span, 'subject', clause_type))
-        elif token.dep_ in {'obj', 'dobj', 'iobj'}:  # 目的語
-            span = get_subtree_span(token)
-            clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
-            if token.dep_ == 'iobj':
-                spans.append((span, 'indirect_object', clause_type))  # 間接目的語
-            else:
-                spans.append((span, 'direct_object', clause_type))  # 直接目的語
-        elif token.dep_ in {'attr', 'acomp', 'oprd', 'xcomp'}:  # 補語
-            span = get_subtree_span(token)
-            clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
-            spans.append((span, 'complement', clause_type))
+        span, span_type, clause_type = get_span_info(token)
+        if span:
+            spans.append((span, span_type, clause_type))
+    return spans
 
-    # HTMLとCSSを使って下線と色を追加
-    annotated_sentence = sentence
+def get_span_info(token):
+    if token.pos_ in ['VERB', 'AUX']:
+        return (token.idx, token.idx + len(token.text)), 'verb' if token.pos_ == 'VERB' else 'auxiliary', 'main' if token.dep_ == 'ROOT' else 'subordinate'
+    elif token.dep_ in ['nsubj', 'csubj', 'nsubjpass', 'csubjpass']:
+        return get_subtree_span(token), 'subject', 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
+    elif token.dep_ in ['obj', 'dobj', 'iobj']:
+        return get_subtree_span(token), 'indirect_object' if token.dep_ == 'iobj' else 'direct_object', 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
+    elif token.dep_ in ['attr', 'acomp', 'oprd', 'xcomp']:
+        return get_subtree_span(token), 'complement', 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
+    return None, None, None
+
+def apply_annotations(sentence, spans):
+    offset_map = [0] * len(sentence)
     for span, span_type, clause_type in sorted(spans, key=lambda x: x[0][0], reverse=True):
-        if span_type == 'subject':
-            color = 'blue'
-        elif span_type == 'verb':
-            color = 'red'
-        elif span_type == 'direct_object':
-            color = 'yellowgreen'
-        elif span_type == 'indirect_object':
-            color = 'green'
-        elif span_type == 'complement':
-            color = 'orange'
-        elif span_type == 'auxiliary':  # 助動詞
-            color = 'pink'
-
-        # このスパンが重なっている部分の最大オフセットを計算
+        color = get_span_color(span_type)
         max_offset = max(offset_map[span[0]:span[1]]) if offset_map[span[0]:span[1]] else 0
-
-        if clause_type == 'main':
-            style = f"border-bottom: 2px solid {color}; padding-bottom: {max_offset}px;"
-        else:  # 'subordinate'
-            style = f"border-bottom: 2px double {color}; padding-bottom: {max_offset}px;"
-
-        # アンダーラインを追加
-        annotated_sentence = (
-            annotated_sentence[:span[0]] + 
-            f"<span style='{style}'>{annotated_sentence[span[0]:span[1]]}</span>" + 
-            annotated_sentence[span[1]:]
-        )
-
-        # このスパンの範囲にオフセットを追加
+        style = f"border-bottom: 2px {'solid' if clause_type == 'main' else 'double'} {color}; padding-bottom: {max_offset}px;"
+        sentence = sentence[:span[0]] + f"<span style='{style}'>{sentence[span[0]:span[1]]}</span>" + sentence[span[1]:]
         for i in range(span[0], span[1]):
-            offset_map[i] += 4  # 4pxずつオフセットを追加
-    
-    return annotated_sentence, doc
+            offset_map[i] += 4
+    return sentence
+
+def get_span_color(span_type):
+    colors = {
+        'subject': 'blue',
+        'verb': 'red',
+        'direct_object': 'yellowgreen',
+        'indirect_object': 'green',
+        'complement': 'orange',
+        'auxiliary': 'pink'
+    }
+    return colors.get(span_type, 'black')
 
 def display_legend():
     legend_html = """
@@ -155,7 +112,6 @@ def display_legend():
     """
     st.markdown(legend_html, unsafe_allow_html=True)
 
-
 def display_token_info(doc):
     token_data = {
         "Text": [token.text for token in doc],
@@ -168,17 +124,34 @@ def display_token_info(doc):
         "Start": [token.idx for token in doc],
         "End": [token.idx + len(token.text) for token in doc]
     }
-    
     token_df = pd.DataFrame(token_data)
     st.dataframe(token_df)
 
+# メイン関数
+def main():
+    initialize_session_state()
 
-st.divider() # 水平線
-if selected_text:
-    underlined_text, doc = underline_clauses(selected_text)
-    st.markdown(underlined_text, unsafe_allow_html=True)
-    display_token_info(doc)
+    # アップロードされた画像の表示とOCR処理
+    image_files = st.file_uploader('画像ファイルを選択してください。', type=['jpg', 'jpeg', 'png'], accept_multiple_files=True)
+    process_uploaded_files(image_files, ocr_model)
 
+    # 文の選択
+    selected_text = ""
+    if st.session_state.sentences:
+        with st.sidebar:
+            selected_text = st.radio("分析する文章を選択してください。", st.session_state.sentences)
 
-# 凡例を表示
-display_legend()
+    # SpaCyの英語モデルをロード
+    nlp = setup_spacy()
+
+    st.divider() # 水平線
+    if selected_text:
+        underlined_text, doc = underline_clauses(selected_text, nlp)
+        st.markdown(underlined_text, unsafe_allow_html=True)
+        display_token_info(doc)
+
+    # 凡例を表示
+    display_legend()
+
+if __name__ == "__main__":
+    main()
