@@ -5,6 +5,8 @@ import streamlit as st
 import requests
 import ocr_main
 import spacy
+import nltk
+from nltk.tokenize import sent_tokenize
 
 # OCRモデルの初期化
 ocr_model = ocr_main.initialize_ocr()
@@ -187,9 +189,20 @@ def determine_sentence_pattern(doc):
 def main():
     initialize_session_state()
 
-    # アップロードされた画像の表示とOCR処理
-    image_files = st.file_uploader('画像ファイルを選択してください。', type=['jpg', 'jpeg', 'png'], accept_multiple_files=True)
-    process_uploaded_files(image_files, ocr_model)
+    # ラジオボタンで「テキスト」か「画像」を選択
+    input_type = st.radio("入力タイプを選択してください:", ("テキスト", "画像"))
+
+    if input_type == "画像":
+        # 画像のアップロードとOCR処理
+        image_files = st.file_uploader('画像ファイルを選択してください。', type=['jpg', 'jpeg', 'png'], accept_multiple_files=True)
+        process_uploaded_files(image_files, ocr_model)
+
+    elif input_type == "テキスト":
+        # テキストボックスと解析ボタンを表示
+        text_input = st.text_area("テキストを入力してください:")
+        if st.button("解析"):
+            # 入力されたテキストを文に分割して保持
+            st.session_state.sentences = sent_tokenize(text_input)
 
     # 文の選択
     selected_text = ""
