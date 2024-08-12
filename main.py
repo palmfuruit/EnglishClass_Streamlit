@@ -2,14 +2,14 @@ import numpy as np
 import pandas as pd
 from PIL import Image, ImageDraw
 import streamlit as st
-import requests
-import ocr_main
-import spacy
-import nltk
-from nltk.tokenize import sent_tokenize
+# import ocr_main
+import stanza
+# import requests
+# import nltk
+# from nltk.tokenize import sent_tokenize
 
 # OCRモデルの初期化
-ocr_model = ocr_main.initialize_ocr()
+# ocr_model = ocr_main.initialize_ocr()
 
 # セッションステートの初期化
 def initialize_session_state():
@@ -17,6 +17,9 @@ def initialize_session_state():
         st.session_state.sentences = []
     if 'processed_files' not in st.session_state:
         st.session_state.processed_files = set()
+    if 'nlp' not in st.session_state:
+        # Stanzaの英語モデルをロードしてセッションステートに保存
+        st.session_state.nlp = setup_stanza()
 
 # ファイルのアップロードとOCR処理
 def process_uploaded_files(image_files, ocr_model):
@@ -35,13 +38,24 @@ def process_images(unprocessed_files, ocr_model):
         st.session_state.processed_files.add(img.name)
     overWrite.empty()
 
-# SpaCyのセットアップと文の解析
-def setup_spacy():
-    return spacy.load('en_core_web_sm')
+# Stanzaのセットアップと文の解析
+def setup_stanza():
+    stanza.download('en')  # Stanzaの英語モデルをダウンロード
+    return stanza.Pipeline('en')  # パイプラインの初期化
 
-def get_subtree_span(token):
-    subtree_tokens = list(token.subtree)
-    return subtree_tokens[0].idx, subtree_tokens[-1].idx + len(subtree_tokens[-1].text)
+def get_subtree_span(token, sentence):
+    start = token.start_char
+    end = token.end_char
+
+    # トークンの子供を再帰的に取得し、最も左の開始位置と最も右の終了位置を求める
+    for word in sentence.words:
+        if word.head == token.id:  # トークンが現在の単語の親である場合
+            child_start, child_end = get_subtree_span(word, sentence)
+            start = min(start, child_start)
+            end = max(end, child_end)
+
+    return start, end
+
 
 def underline_clauses(sentence, nlp):
     doc = nlp(sentence)
@@ -69,28 +83,29 @@ def check_for_overlap(spans):
 
 def extract_spans(doc):
     spans = []
-    for token in doc:
-        span, span_type, clause_type = get_span_info(token)
-        if span:
-            spans.append((span, span_type, clause_type))
+    for sentence in doc.sentences:
+        for token in sentence.words:
+            span, span_type, clause_type = get_span_info(token, sentence)
+            if span:
+                spans.append((span, span_type, clause_type))
     return spans
 
-def get_span_info(token):
-    if token.pos_ == 'VERB':
-        # 動詞の場合、token.dep_ が ROOT なら主節、それ以外は従属節
-        clause_type = 'main' if token.dep_ == 'ROOT' else 'subordinate'
-        return (token.idx, token.idx + len(token.text)), 'verb', clause_type
-    elif token.pos_ == 'AUX':
-        # 助動詞の場合、token.head.dep_ が ROOT なら主節、それ以外は従属節
-        clause_type = 'main' if token.dep_ == 'ROOT' or token.head.dep_ == 'ROOT' else 'subordinate'
-        return (token.idx, token.idx + len(token.text)), 'auxiliary', clause_type
-    elif token.dep_ in ['nsubj', 'csubj', 'nsubjpass', 'csubjpass']:
-        return get_subtree_span(token), 'subject', 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
-    elif token.dep_ in ['obj', 'dobj', 'iobj']:
-        return get_subtree_span(token), 'indirect_object' if token.dep_ == 'iobj' else 'direct_object', 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
-    elif token.dep_ in ['attr', 'acomp', 'oprd', 'xcomp']:
-        return get_subtree_span(token), 'complement', 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
+
+def get_span_info(token, sentence):
+    if token.upos == 'VERB':
+        clause_type = 'main' if token.head == 0 else 'subordinate'
+        return (token.start_char, token.end_char), 'verb', clause_type
+    elif token.upos == 'AUX':
+        clause_type = 'main' if token.head == 0 else 'subordinate'
+        return (token.start_char, token.end_char), 'auxiliary', clause_type
+    elif token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:
+        return get_subtree_span(token, sentence), 'subject', 'main' if token.head == 0 else 'subordinate'
+    elif token.deprel in ['obj', 'iobj']:
+        return get_subtree_span(token, sentence), 'indirect_object' if token.deprel == 'iobj' else 'direct_object', 'main' if token.head == 0 else 'subordinate'
+    elif token.deprel in ['cop', 'xcomp']:
+        return get_subtree_span(token, sentence), 'complement', 'main' if token.head == 0 else 'subordinate'
     return None, None, None
+
 
 def apply_annotations(sentence, spans, clause_type_filter=None):
     offset_map = [0] * len(sentence)
@@ -138,15 +153,20 @@ def display_legend():
 
 def display_token_info(doc):
     token_data = {
-        "Text": [token.text for token in doc],
-        "Lemma": [token.lemma_ for token in doc],
-        "POS": [token.pos_ for token in doc],
-        "Tag": [token.tag_ for token in doc],
-        "Dependency": [token.dep_ for token in doc],
-        "Head": [token.head.text for token in doc],
-        "Children": [[child.text for child in token.children] for token in doc],
-        "Start": [token.idx for token in doc],
-        "End": [token.idx + len(token.text) for token in doc]
+        "Text": [word.text for sentence in doc.sentences for word in sentence.words],
+        "Lemma": [word.lemma for sentence in doc.sentences for word in sentence.words],
+        "POS": [word.upos for sentence in doc.sentences for word in sentence.words],
+        "Dependency": [word.deprel for sentence in doc.sentences for word in sentence.words],
+        "Head": [
+            sentence.words[word.head - 1].text if 0 < word.head <= len(sentence.words) else 'ROOT'
+            for sentence in doc.sentences for word in sentence.words
+        ],
+        "Children": [
+            [child.text for child in sentence.words if child.head == word.id]
+            for sentence in doc.sentences for word in sentence.words
+        ],
+        "Start": [word.start_char for sentence in doc.sentences for word in sentence.words],
+        "End": [word.end_char for sentence in doc.sentences for word in sentence.words]
     }
     token_df = pd.DataFrame(token_data)
     st.dataframe(token_df)
@@ -159,18 +179,19 @@ def determine_sentence_pattern(doc):
     has_object_complement = False
     has_indirect_object = False
 
-    for token in doc:
-        if token.dep_ in ['nsubj', 'csubj', 'nsubjpass', 'csubjpass']:
-            has_subject = True
-        elif token.dep_ in ['obj', 'dobj', 'iobj']:
-            if token.dep_ == 'iobj':
-                has_indirect_object = True
-            else:
-                has_object = True
-        elif token.dep_ in ['attr', 'acomp', 'xcomp']:
-            has_complement = True
-        elif token.dep_ in ['oprd']:
-            has_object_complement = True
+    for sentence in doc.sentences:
+        for token in sentence.words:
+            if token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:
+                has_subject = True
+            elif token.deprel in ['obj', 'iobj']:
+                if token.deprel == 'iobj':
+                    has_indirect_object = True
+                else:
+                    has_object = True
+            elif token.deprel in ['cop', 'xcomp']:
+                has_complement = True
+            elif token.deprel in ['oprd']:
+                has_object_complement = True
 
     if has_subject and not has_object and not has_complement:
         return "第1文型 (SV)"
@@ -184,6 +205,7 @@ def determine_sentence_pattern(doc):
         return "第5文型 (SVOC)"
     else:
         return ""
+
 
 # メイン関数
 def main():
@@ -201,8 +223,9 @@ def main():
         # テキストボックスと解析ボタンを表示
         text_input = st.text_area("テキストを入力してください:")
         if st.button("解析"):
-            # 入力されたテキストを文に分割して保持
-            st.session_state.sentences = sent_tokenize(text_input)
+            # 入力されたテキストをStanzaで文に分割して保持
+            doc = st.session_state.nlp(text_input)
+            st.session_state.sentences = [sentence.text for sentence in doc.sentences]
 
     # 文の選択
     selected_text = ""
@@ -210,12 +233,9 @@ def main():
         with st.sidebar:
             selected_text = st.radio("分析する文章を選択してください。", st.session_state.sentences)
 
-    # SpaCyの英語モデルをロード
-    nlp = setup_spacy()
-
     st.divider() # 水平線
     if selected_text:
-        main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, nlp)
+        main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, st.session_state.nlp)
 
         # 文型を判定して表示
         sentence_pattern = determine_sentence_pattern(doc)
