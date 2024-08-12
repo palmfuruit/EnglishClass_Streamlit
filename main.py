@@ -114,16 +114,22 @@ def underline_clauses(sentence):
     doc = nlp(sentence)
     
     spans = []
+    offset_map = [0] * len(sentence)  # 文字ごとのずらし量を格納するリスト
 
     for token in doc:
-        if token.dep_ in {'nsubj', 'csubj', 'nsubjpass', 'csubjpass'}:  # 主語
-            span = get_subtree_span(token)
-            clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
-            spans.append((span, 'subject', clause_type))
-        elif token.pos_ == 'VERB':  # 動詞
+        if token.pos_ == 'VERB':  # 動詞
             span = (token.idx, token.idx + len(token.text))
             clause_type = 'main' if token.dep_ == 'ROOT' else 'subordinate'
             spans.append((span, 'verb', clause_type))
+        elif token.pos_ == 'AUX':  # 助動詞
+            span = (token.idx, token.idx + len(token.text))
+            clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
+            spans.append((span, 'auxiliary', clause_type))
+        
+        elif token.dep_ in {'nsubj', 'csubj', 'nsubjpass', 'csubjpass'}:  # 主語
+            span = get_subtree_span(token)
+            clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
+            spans.append((span, 'subject', clause_type))
         elif token.dep_ in {'obj', 'dobj', 'iobj'}:  # 目的語
             span = get_subtree_span(token)
             clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
@@ -135,10 +141,6 @@ def underline_clauses(sentence):
             span = get_subtree_span(token)
             clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
             spans.append((span, 'complement', clause_type))
-        elif token.pos_ == 'AUX':  # 助動詞
-            span = (token.idx, token.idx + len(token.text))
-            clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
-            spans.append((span, 'auxiliary', clause_type))
 
     # HTMLとCSSを使って下線と色を追加
     annotated_sentence = sentence
@@ -156,20 +158,26 @@ def underline_clauses(sentence):
         elif span_type == 'auxiliary':  # 助動詞
             color = 'pink'
 
-        if clause_type == 'main':
-            style = f"border-bottom: 2px solid {color};"
-        else:  # 'subordinate'
-            style = f"border-bottom: 2px double {color};"
+        # このスパンが重なっている部分の最大オフセットを計算
+        max_offset = max(offset_map[span[0]:span[1]]) if offset_map[span[0]:span[1]] else 0
 
+        if clause_type == 'main':
+            style = f"border-bottom: 2px solid {color}; padding-bottom: {max_offset}px;"
+        else:  # 'subordinate'
+            style = f"border-bottom: 2px double {color}; padding-bottom: {max_offset}px;"
+
+        # アンダーラインを追加
         annotated_sentence = (
             annotated_sentence[:span[0]] + 
             f"<span style='{style}'>{annotated_sentence[span[0]:span[1]]}</span>" + 
             annotated_sentence[span[1]:]
         )
+
+        # このスパンの範囲にオフセットを追加
+        for i in range(span[0], span[1]):
+            offset_map[i] += 4  # 4pxずつオフセットを追加
     
     return annotated_sentence, doc
-
-
 
 def display_legend():
     legend_html = """
