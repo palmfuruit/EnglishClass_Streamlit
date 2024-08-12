@@ -74,8 +74,14 @@ def extract_spans(doc):
     return spans
 
 def get_span_info(token):
-    if token.pos_ in ['VERB', 'AUX']:
-        return (token.idx, token.idx + len(token.text)), 'verb' if token.pos_ == 'VERB' else 'auxiliary', 'main' if token.dep_ == 'ROOT' else 'subordinate'
+    if token.pos_ == 'VERB':
+        # 動詞の場合、token.dep_ が ROOT なら主節、それ以外は従属節
+        clause_type = 'main' if token.dep_ == 'ROOT' else 'subordinate'
+        return (token.idx, token.idx + len(token.text)), 'verb', clause_type
+    elif token.pos_ == 'AUX':
+        # 助動詞の場合、token.head.dep_ が ROOT なら主節、それ以外は従属節
+        clause_type = 'main' if token.dep_ == 'ROOT' or token.head.dep_ == 'ROOT' else 'subordinate'
+        return (token.idx, token.idx + len(token.text)), 'auxiliary', clause_type
     elif token.dep_ in ['nsubj', 'csubj', 'nsubjpass', 'csubjpass']:
         return get_subtree_span(token), 'subject', 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
     elif token.dep_ in ['obj', 'dobj', 'iobj']:
@@ -166,6 +172,7 @@ def main():
         if subordinate_clause_sentence:
             st.write('<主節>')
             st.markdown(main_clause_sentence, unsafe_allow_html=True)
+            st.write('  ')
             st.write('<従属節>')
             st.markdown(subordinate_clause_sentence, unsafe_allow_html=True)
         else:
