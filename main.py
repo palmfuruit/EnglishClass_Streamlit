@@ -9,11 +9,6 @@ ocr_model = ocr_main.initialize_ocr()
 
 if 'sentences' not in st.session_state:
     st.session_state.sentences = []
-    st.session_state.sentences1 = []
-    st.session_state.sentences2 = []
-    st.session_state.sentences3 = []
-    st.session_state.sentences4 = []
-    st.session_state.sentences5 = []
 
 # 処理済みファイルを追跡するためのセットを作成
 if 'processed_files' not in st.session_state:
@@ -52,50 +47,15 @@ if unprocessed_files:
         response_data = response.json()
         # st.write(response_data)
 
-        st.session_state.sentences1 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 1]
-        st.session_state.sentences2 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 2]
-        st.session_state.sentences3 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 3]
-        st.session_state.sentences4 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 4]
-        st.session_state.sentences5 = [st.session_state.sentences[i] for i in range(len(response_data)) if response_data[i]["pattern"] == 5]
+ 
 
 
-
-sentence_patterns = [
-    '第1文型 (SV)',
-    '第2文型 (SVC)',
-    '第3文型 (SVO)',
-    '第4文型 (SVOO)',
-    '第5文型 (SVOC)',
-    '全て'
-]
-
-current_pattern = st.selectbox(
-    '文型を選択',
-    sentence_patterns,
-    index = None,
-    placeholder = 'どの文型を取り出しますか'
-    )
-
-selected_sentences = []
-if current_pattern == '全て':
-    selected_sentences = st.session_state.sentences
-elif current_pattern == sentence_patterns[0]:
-    selected_sentences = st.session_state.sentences1
-elif current_pattern == sentence_patterns[1]:
-    selected_sentences = st.session_state.sentences2
-elif current_pattern == sentence_patterns[2]:
-    selected_sentences = st.session_state.sentences3
-elif current_pattern == sentence_patterns[3]:
-    selected_sentences = st.session_state.sentences4
-elif current_pattern == sentence_patterns[4]:
-    selected_sentences = st.session_state.sentences5
-
-# st.write(selected_sentences)
+# st.write(st.session_state.sentences)
 # ラジオボタンでテキストを選択
 selected_text = ""
-if selected_sentences:
+if st.session_state.sentences:
     with st.sidebar:
-        selected_text = st.radio("Select text", selected_sentences)
+        selected_text = st.radio("分析する文章を選択してください。", st.session_state.sentences)
 
 
 
