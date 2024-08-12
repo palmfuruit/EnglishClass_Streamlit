@@ -94,7 +94,8 @@ elif current_pattern == sentence_patterns[4]:
 # ラジオボタンでテキストを選択
 selected_text = ""
 if selected_sentences:
-    selected_text = st.radio("Select text", selected_sentences)
+    with st.sidebar:
+        selected_text = st.radio("Select text", selected_sentences)
 
 
 
