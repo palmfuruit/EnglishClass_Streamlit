@@ -124,18 +124,18 @@ def underline_clauses(sentence):
             span = (token.idx, token.idx + len(token.text))
             clause_type = 'main' if token.dep_ == 'ROOT' else 'subordinate'
             spans.append((span, 'verb', clause_type))
-        elif token.dep_ in {'dobj', 'iobj'}:  # 目的語
+        elif token.dep_ in {'obj', 'dobj', 'iobj'}:  # 目的語
             span = get_subtree_span(token)
             clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
-            if token.dep_ == 'dobj':
-                spans.append((span, 'direct_object', clause_type))  # 直接目的語
-            else:
+            if token.dep_ == 'iobj':
                 spans.append((span, 'indirect_object', clause_type))  # 間接目的語
-        elif token.dep_ in {'attr', 'acomp', 'oprd'}:  # 補語
+            else:
+                spans.append((span, 'direct_object', clause_type))  # 直接目的語
+        elif token.dep_ in {'attr', 'acomp', 'oprd', 'xcomp'}:  # 補語
             span = get_subtree_span(token)
             clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
             spans.append((span, 'complement', clause_type))
-        elif token.dep_ == 'aux':  # 助動詞
+        elif token.pos_ == 'AUX':  # 助動詞
             span = (token.idx, token.idx + len(token.text))
             clause_type = 'main' if token.head.dep_ == 'ROOT' else 'subordinate'
             spans.append((span, 'auxiliary', clause_type))
@@ -148,9 +148,9 @@ def underline_clauses(sentence):
         elif span_type == 'verb':
             color = 'red'
         elif span_type == 'direct_object':
-            color = 'green'
-        elif span_type == 'indirect_object':
             color = 'yellowgreen'
+        elif span_type == 'indirect_object':
+            color = 'green'
         elif span_type == 'complement':
             color = 'orange'
         elif span_type == 'auxiliary':  # 助動詞
@@ -176,8 +176,8 @@ def display_legend():
     <div style='border: 2px solid black; padding: 10px; margin-bottom: 20px;'>
         <p><span style='color: blue;'>■</span> 主語 (Subject)</p>
         <p><span style='color: red;'>■</span> 動詞 (Verb)</p>
-        <p><span style='color: green;'>■</span> 直接目的語 (Direct Object)</p>
-        <p><span style='color: yellowgreen;'>■</span> 間接目的語 (Indirect Object)</p>
+        <p><span style='color: yellowgreen;'>■</span> 目的語 (Object)</p>
+        <p><span style='color: green;'>■</span> 間接目的語 (Indirect Object)</p>
         <p><span style='color: orange;'>■</span> 補語 (Complement)</p>
         <p><span style='color: pink;'>■</span> 助動詞 (Auxiliary)</p>
         <p><span style='border-bottom: 2px solid black; display: inline-block; width: 80px;'>      </span> 主節 (Main Clause)</p>
