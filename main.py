@@ -47,12 +47,12 @@ def get_subtree_span(token, sentence):
     start = token.start_char
     end = token.end_char
 
-    # トークンの子供を再帰的に取得し、最も左の開始位置と最も右の終了位置を求める
+    # トークンの子供(動詞と句読点除く)を探し、その範囲を確認する
     for word in sentence.words:
-        if word.head == token.id:  # トークンが現在の単語の親である場合
-            child_start, child_end = get_subtree_span(word, sentence)
-            start = min(start, child_start)
-            end = max(end, child_end)
+        if word.head == token.id and (word.upos not in ['VERB', 'PUNCT']):  # トークンが現在の単語の親である場合
+            # 子トークンの範囲を確認し、現在の範囲と比較して更新する
+            start = min(start, word.start_char)
+            end = max(end, word.end_char)
 
     return start, end
 
@@ -112,6 +112,7 @@ def get_span_info(token, sentence):
         return get_subtree_span(token, sentence), 'complement', clause_type
     elif token.deprel == 'root' and token.upos in ['NOUN', 'ADJ']:      # 補語 パターン2
         return (token.start_char, token.end_char), 'complement', clause_type
+    
     return None, None, None
 
 
