@@ -93,16 +93,13 @@ def extract_spans(doc):
 
 def get_span_info(token, sentence):
     head_token = sentence.words[token.head - 1] if token.head > 0 else None
-    if token.head == 0 or (token.upos != 'VERB' and head_token and head_token.deprel == 'root'):
+    if token.head == 0 or (head_token and head_token.deprel == 'root'):
         clause_type = 'main'
     else:
         clause_type = 'subordinate'
 
-    if token.upos == 'VERB':    # 動詞
-        return (token.start_char, token.end_char), 'verb', clause_type
-    elif token.upos == 'AUX':    # 助動詞
-        return (token.start_char, token.end_char), 'auxiliary', clause_type
-    elif token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:    # 主語
+
+    if token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:    # 主語
         return get_subtree_span(token, sentence), 'subject', clause_type
     elif token.deprel in ['obj']:    # 目的語
         return get_subtree_span(token, sentence), 'direct_object', clause_type
@@ -112,6 +109,14 @@ def get_span_info(token, sentence):
         return get_subtree_span(token, sentence), 'complement', clause_type
     elif token.deprel == 'root' and token.upos in ['NOUN', 'ADJ']:      # 補語 パターン2
         return (token.start_char, token.end_char), 'complement', clause_type
+    elif token.upos == 'VERB':    # 動詞
+        if token.head == 0:
+            clause_type = 'main'
+        else:
+            clause_type = 'subordinate'
+        return (token.start_char, token.end_char), 'verb', clause_type
+    elif token.upos == 'AUX':    # 助動詞
+        return (token.start_char, token.end_char), 'auxiliary', clause_type
     
     return None, None, None
 
@@ -203,12 +208,12 @@ def determine_sentence_pattern(spans):
         return "第1文型 (SV)"
     elif has_subject and has_complement and not has_object:
         return "第2文型 (SVC)"
-    elif has_subject and has_object and not has_object_complement and not has_indirect_object:
-        return "第3文型 (SVO)"
     elif has_subject and has_object and has_indirect_object:
         return "第4文型 (SVOO)"
     elif has_subject and has_object and has_complement:
         return "第5文型 (SVOC)"
+    elif has_subject and has_object:
+        return "第3文型 (SVO)"
     else:
         return ""
 
