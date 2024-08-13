@@ -105,7 +105,9 @@ def get_span_info(token, sentence):
         return get_subtree_span(token, sentence), 'direct_object', clause_type
     elif token.deprel == 'iobj':    # 間接目的語
         return get_subtree_span(token, sentence), 'indirect_object', clause_type
-    elif token.deprel in ['cop', 'xcomp'] :     # 補語
+    elif token.deprel == 'ccomp' and head_token and head_token.upos == 'VERB':    # 節全体が目的語
+        return get_subtree_span(token, sentence), 'direct_object', clause_type
+    elif token.deprel in ['xcomp'] :     # 補語
         return get_subtree_span(token, sentence), 'complement', clause_type
     elif token.deprel == 'root' and token.upos in ['NOUN', 'ADJ']:      # 補語 パターン2
         return (token.start_char, token.end_char), 'complement', clause_type
