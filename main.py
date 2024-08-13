@@ -93,7 +93,7 @@ def extract_spans(doc):
 
 def get_span_info(token, sentence):
     head_token = sentence.words[token.head - 1] if token.head > 0 else None
-    if token.head == 0 or (token.upos != 'VERB' and head_token and head_token.deprel == 'root' and token.deprel not in ['ccomp', 'xcomp', 'parataxis']):
+    if token.head == 0 or (token.upos != 'VERB' and head_token and head_token.deprel == 'root'):
         clause_type = 'main'
     else:
         clause_type = 'subordinate'
@@ -104,16 +104,13 @@ def get_span_info(token, sentence):
         return (token.start_char, token.end_char), 'auxiliary', clause_type
     elif token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:    # 主語
         return get_subtree_span(token, sentence), 'subject', clause_type
-    elif token.deprel in ['obj']:
-        return get_subtree_span(token, sentence), 'direct_object', clause_type    # 目的語
+    elif token.deprel in ['obj']:    # 目的語
+        return get_subtree_span(token, sentence), 'direct_object', clause_type
     elif token.deprel == 'iobj':    # 間接目的語
         return get_subtree_span(token, sentence), 'indirect_object', clause_type
-    elif token.deprel in ['cop', 'xcomp'] :
-        head_token = sentence.words[token.head - 1] if token.head > 0 else None
-        clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
+    elif token.deprel in ['cop', 'xcomp'] :     # 補語
         return get_subtree_span(token, sentence), 'complement', clause_type
-    elif token.deprel == 'root' and token.upos in ['NOUN', 'ADJ']:
-        # 補語 パターン2
+    elif token.deprel == 'root' and token.upos in ['NOUN', 'ADJ']:      # 補語 パターン2
         return (token.start_char, token.end_char), 'complement', clause_type
     return None, None, None
 
