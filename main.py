@@ -92,43 +92,28 @@ def extract_spans(doc):
 
 
 def get_span_info(token, sentence):
-    if token.upos == 'VERB':
-        # 動詞
-        clause_type = 'main' if token.head == 0 else 'subordinate'
-        return (token.start_char, token.end_char), 'verb', clause_type
-    elif token.upos == 'AUX':
-        # 助動詞
-        clause_type = 'main' if token.head == 0 else 'subordinate'
-        return (token.start_char, token.end_char), 'auxiliary', clause_type
+
+    head_token = sentence.words[token.head - 1] if token.head > 0 else None
+    clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
     
-    elif token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:
-        # 主語
-        head_token = sentence.words[token.head - 1] if token.head > 0 else None
-        clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
+    if token.upos == 'VERB':    # 動詞
+        return (token.start_char, token.end_char), 'verb', clause_type
+    elif token.upos == 'AUX':    # 助動詞
+        return (token.start_char, token.end_char), 'auxiliary', clause_type
+    elif token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:    # 主語
         return get_subtree_span(token, sentence), 'subject', clause_type
-    elif token.deprel in ['obj', 'ccomp']:  # ccompを追加
-        # 目的語または補文節
-        head_token = sentence.words[token.head - 1] if token.head > 0 else None
-        clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
-        return get_subtree_span(token, sentence), 'direct_object', clause_type
-    elif token.deprel == 'iobj':
-        # 間接目的語
-        head_token = sentence.words[token.head - 1] if token.head > 0 else None
-        clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
+    elif token.deprel in ['obj']:
+        return get_subtree_span(token, sentence), 'direct_object', clause_type    # 目的語
+    elif token.deprel == 'iobj':    # 間接目的語
         return get_subtree_span(token, sentence), 'indirect_object', clause_type
     elif token.deprel in ['cop', 'xcomp'] :
-        # 補語
         head_token = sentence.words[token.head - 1] if token.head > 0 else None
         clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
         return get_subtree_span(token, sentence), 'complement', clause_type
     elif token.deprel == 'root' and token.upos in ['NOUN', 'ADJ']:
         # 補語 パターン2
-        head_token = sentence.words[token.head - 1] if token.head > 0 else None
-        clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
         return (token.start_char, token.end_char), 'complement', clause_type
     return None, None, None
-
-
 
 
 def apply_annotations(sentence, spans, clause_type_filter=None):
@@ -207,7 +192,7 @@ def determine_sentence_pattern(doc):
         for token in sentence.words:
             if token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:
                 has_subject = True
-            elif token.deprel in ['obj', 'iobj', 'ccomp']: 
+            elif token.deprel in ['obj', 'iobj']: 
                 if token.deprel == 'iobj':
                     has_indirect_object = True
                 else:
