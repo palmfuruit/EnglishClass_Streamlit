@@ -234,7 +234,7 @@ def main():
 
     elif input_type == "テキスト":
         # テキストボックスと解析ボタンを表示
-        text_input = st.text_area("テキストを入力してください:")
+        text_input = st.text_area("テキストを入力してください:", height=300)
         if st.button("解析"):
             # 入力されたテキストをStanzaで文に分割して保持
             doc = st.session_state.nlp(text_input)
