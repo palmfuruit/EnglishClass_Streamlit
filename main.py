@@ -92,10 +92,12 @@ def extract_spans(doc):
 
 
 def get_span_info(token, sentence):
-
     head_token = sentence.words[token.head - 1] if token.head > 0 else None
-    clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
-    
+    if token.head == 0 or (token.upos != 'VERB' and head_token and head_token.deprel == 'root' and token.deprel not in ['ccomp', 'xcomp', 'parataxis']):
+        clause_type = 'main'
+    else:
+        clause_type = 'subordinate'
+
     if token.upos == 'VERB':    # 動詞
         return (token.start_char, token.end_char), 'verb', clause_type
     elif token.upos == 'AUX':    # 助動詞
