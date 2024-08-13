@@ -105,10 +105,12 @@ def get_span_info(token, sentence):
         return get_subtree_span(token, sentence), 'direct_object', clause_type
     elif token.deprel == 'iobj':    # 間接目的語
         return get_subtree_span(token, sentence), 'indirect_object', clause_type
-    elif token.deprel == 'ccomp' and head_token and head_token.upos == 'VERB':    # 節全体が目的語
-        return get_subtree_span(token, sentence), 'direct_object', clause_type
-    elif token.deprel in ['xcomp'] :     # 補語
-        return get_subtree_span(token, sentence), 'complement', clause_type
+    elif token.deprel in ['xcomp', 'ccomp']  and head_token and head_token.upos == 'VERB':
+        # 'xcomp'/'ccomp'が動詞、または節の中にBe動詞がある。→目的語
+        if token.upos == 'VERB' or any((word.deprel == "cop" and word.head == token.id) for word in sentence.words):
+            return get_subtree_span(token, sentence), 'direct_object', clause_type
+        else:
+            return get_subtree_span(token, sentence), 'complement', clause_type
     elif token.deprel == 'root' and token.upos in ['NOUN', 'ADJ']:      # 補語 パターン2
         return (token.start_char, token.end_char), 'complement', clause_type
     elif token.upos == 'VERB':    # 動詞
