@@ -99,12 +99,25 @@ def get_span_info(token, sentence):
         clause_type = 'main' if token.head == 0 else 'subordinate'
         return (token.start_char, token.end_char), 'auxiliary', clause_type
     elif token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:
-        return get_subtree_span(token, sentence), 'subject', 'main' if token.head == 0 else 'subordinate'
-    elif token.deprel in ['obj', 'iobj']:
-        return get_subtree_span(token, sentence), 'indirect_object' if token.deprel == 'iobj' else 'direct_object', 'main' if token.head == 0 else 'subordinate'
+        # 主語の処理
+        head_token = sentence.words[token.head - 1] if token.head > 0 else None
+        clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
+        return get_subtree_span(token, sentence), 'subject', clause_type
+    elif token.deprel == 'obj':
+        # 目的語の処理
+        head_token = sentence.words[token.head - 1] if token.head > 0 else None
+        clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
+        return get_subtree_span(token, sentence), 'direct_object', clause_type
+    elif token.deprel == 'iobj':
+        # 間接目的語の処理
+        head_token = sentence.words[token.head - 1] if token.head > 0 else None
+        clause_type = 'main' if head_token and head_token.deprel == 'root' else 'subordinate'
+        return get_subtree_span(token, sentence), 'indirect_object', clause_type
     elif token.deprel in ['cop', 'xcomp']:
         return get_subtree_span(token, sentence), 'complement', 'main' if token.head == 0 else 'subordinate'
     return None, None, None
+
+
 
 
 def apply_annotations(sentence, spans, clause_type_filter=None):
