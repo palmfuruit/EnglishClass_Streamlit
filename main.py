@@ -176,33 +176,30 @@ def display_token_info(doc):
             [child.text for child in sentence.words if child.head == word.id]
             for sentence in doc.sentences for word in sentence.words
         ],
-        "Start": [word.start_char for sentence in doc.sentences for word in sentence.words],
-        "End": [word.end_char for sentence in doc.sentences for word in sentence.words]
+        # "Start": [word.start_char for sentence in doc.sentences for word in sentence.words],
+        # "End": [word.end_char for sentence in doc.sentences for word in sentence.words]
     }
     token_df = pd.DataFrame(token_data)
     st.dataframe(token_df)
 
 
-def determine_sentence_pattern(doc):
+def determine_sentence_pattern(spans):
     has_subject = False
     has_object = False
     has_complement = False
     has_object_complement = False
     has_indirect_object = False
 
-    for sentence in doc.sentences:
-        for token in sentence.words:
-            if token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:
+    for span, span_type, clause_type in spans:
+        if clause_type == 'main':  # Only consider spans from the main clause
+            if span_type == 'subject':
                 has_subject = True
-            elif token.deprel in ['obj', 'iobj']: 
-                if token.deprel == 'iobj':
-                    has_indirect_object = True
-                else:
-                    has_object = True
-            elif token.deprel in ['cop', 'xcomp']:
+            elif span_type == 'direct_object':
+                has_object = True
+            elif span_type == 'indirect_object':
+                has_indirect_object = True
+            elif span_type == 'complement':
                 has_complement = True
-            elif token.deprel in ['oprd']:
-                has_object_complement = True
 
     if has_subject and not has_object and not has_complement:
         return "第1文型 (SV)"
@@ -212,7 +209,7 @@ def determine_sentence_pattern(doc):
         return "第3文型 (SVO)"
     elif has_subject and has_object and has_indirect_object:
         return "第4文型 (SVOO)"
-    elif has_subject and has_object and has_object_complement:
+    elif has_subject and has_object and has_complement:
         return "第5文型 (SVOC)"
     else:
         return ""
@@ -249,7 +246,8 @@ def main():
         main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, st.session_state.nlp)
 
         # 文型を判定して表示
-        sentence_pattern = determine_sentence_pattern(doc)
+        spans = extract_spans(doc)
+        sentence_pattern = determine_sentence_pattern(spans)
         st.write(sentence_pattern)
         
         if subordinate_clause_sentence:
