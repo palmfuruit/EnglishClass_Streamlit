@@ -49,7 +49,7 @@ def get_subtree_span(token, sentence):
 
     # トークンの子供(動詞と句読点除く)を探し、その範囲を確認する
     for word in sentence.words:
-        if word.head == token.id and (word.upos not in ['VERB', 'PUNCT']):  # トークンが現在の単語の親である場合
+        if word.head == token.id and (word.upos not in ['VERB', 'PUNCT']) and (word.deprel not in ['appos', 'conj', 'advmod']):  # トークンが現在の単語の親である場合
             # 子トークンの範囲を確認し、現在の範囲と比較して更新する
             start = min(start, word.start_char)
             end = max(end, word.end_char)
