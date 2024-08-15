@@ -235,10 +235,11 @@ grammer_labels = [
 def main():
     initialize_session_state()
 
-    st.title('英語学習アプリ')
+    st.title('英語Readingアプリ')
+    st.write('--英語の記事やマンガでreadingの練習--')
 
     # ラジオボタンで「テキスト」か「画像」を選択
-    input_type = st.radio("入力タイプを選択してください:", ("テキスト", "画像"))
+    input_type = st.radio("入力フォーマット", ("テキスト", "画像"))
 
     if input_type == "画像":
         # 画像のアップロードとOCR処理
@@ -248,7 +249,7 @@ def main():
     elif input_type == "テキスト":
         # テキストボックスと解析ボタンを表示
         text_input = st.text_area("英語のテキストを入力してください:", height=300)
-        if st.button("解析"):
+        if st.button("入力"):
             # 入力されたテキストをStanzaで文に分割して保持
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
@@ -267,7 +268,7 @@ def main():
     selected_text = ""
     if st.session_state.sentences:
         with st.sidebar:
-            selected_text = st.radio("分析する文章を選択してください。", st.session_state.sentences)
+            selected_text = st.radio("文を選択してください。", st.session_state.sentences)
 
     st.divider() # 水平線
     if selected_text:
@@ -283,7 +284,12 @@ def main():
         selected_index = st.session_state.sentences.index(selected_text)
         preds = response_data[selected_index]
         pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
-        st.write(pred_labels)
+        pred_labels_html = ""
+        for label in pred_labels:
+            pred_labels_html += f"<span style='background-color: pink; padding: 2px 4px; margin-right: 5px;'>{label}</span>"
+
+        # st.write(f'<span style="background:pink">{"　".join(pred_labels)}</span>', unsafe_allow_html=True)
+        st.write(pred_labels_html, unsafe_allow_html=True)
         
 
         if subordinate_clause_sentence:
@@ -294,7 +300,9 @@ def main():
             st.markdown(subordinate_clause_sentence, unsafe_allow_html=True)
         else:
             st.markdown(main_clause_sentence, unsafe_allow_html=True)
-        display_token_info(doc)
+        
+        # トークン情報の表を出力 (開発用)
+        # display_token_info(doc)
 
     # 凡例を表示
     display_legend()
