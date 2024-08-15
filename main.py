@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 import streamlit as st
 # import ocr_main
 import stanza
-# import requests
+import requests
 # import nltk
 # from nltk.tokenize import sent_tokenize
 
@@ -222,6 +222,15 @@ def determine_sentence_pattern(spans):
         return ""
 
 
+grammer_labels = [
+    '受動態',
+    '比較',
+    '仮定法',
+    '使役',
+    '関係代名詞',
+    '関係副詞'
+]
+
 # メイン関数
 def main():
     initialize_session_state()
@@ -242,6 +251,16 @@ def main():
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
 
+    # 取得した文章を文型予測した配列を取得
+    if st.session_state.sentences:
+        api_url = "http://localhost:8000/predict"
+        data = {"text": st.session_state.sentences}
+        response = requests.post(api_url, json=data)
+        response.raise_for_status()
+        response_data = list(response.json())
+        # st.write(response_data)
+
+
     # 文の選択
     selected_text = ""
     if st.session_state.sentences:
@@ -250,13 +269,21 @@ def main():
 
     st.divider() # 水平線
     if selected_text:
+        # 主語や動詞にアンダーラインを引く
         main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, st.session_state.nlp)
 
-        # 文型を判定して表示
+        # 文型
         spans = extract_spans(doc)
         sentence_pattern = determine_sentence_pattern(spans)
         st.write(sentence_pattern)
+
+        # 該当する文法を表示 (仮定法、比較級、・・・)
+        selected_index = st.session_state.sentences.index(selected_text)
+        preds = response_data[selected_index]
+        pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
+        st.write(pred_labels)
         
+
         if subordinate_clause_sentence:
             st.write('<主節>')
             st.markdown(main_clause_sentence, unsafe_allow_html=True)
