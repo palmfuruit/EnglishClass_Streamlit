@@ -235,6 +235,8 @@ grammer_labels = [
 def main():
     initialize_session_state()
 
+    st.title('英語学習アプリ')
+
     # ラジオボタンで「テキスト」か「画像」を選択
     input_type = st.radio("入力タイプを選択してください:", ("テキスト", "画像"))
 
@@ -245,7 +247,7 @@ def main():
 
     elif input_type == "テキスト":
         # テキストボックスと解析ボタンを表示
-        text_input = st.text_area("テキストを入力してください:", height=300)
+        text_input = st.text_area("英語のテキストを入力してください:", height=300)
         if st.button("解析"):
             # 入力されたテキストをStanzaで文に分割して保持
             doc = st.session_state.nlp(text_input)
