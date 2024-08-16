@@ -242,7 +242,7 @@ def main():
     st.title('英語Reading学習アプリ')
 
     # ラジオボタンで「テキスト」か「画像」を選択
-    input_type = st.radio("英語テキストの入力方法。", ("テキスト", "画像"))
+    input_type = st.radio("英語テキストの入力方法", ("テキスト", "画像"))
 
     if input_type == "画像":
         # 画像のアップロードとOCR処理
