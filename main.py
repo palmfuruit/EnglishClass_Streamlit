@@ -15,6 +15,10 @@ import requests
 def initialize_session_state():
     if 'sentences' not in st.session_state:
         st.session_state.sentences = []
+    
+    if 'response_data' not in st.session_state:
+        st.session_state.response_data = []
+
     if 'processed_files' not in st.session_state:
         st.session_state.processed_files = set()
     if 'nlp' not in st.session_state:
@@ -235,11 +239,10 @@ grammer_labels = [
 def main():
     initialize_session_state()
 
-    st.title('英語Readingアプリ')
-    st.write('--英語の記事やマンガでreadingの練習--')
+    st.title('英語Reading学習アプリ')
 
     # ラジオボタンで「テキスト」か「画像」を選択
-    input_type = st.radio("入力フォーマット", ("テキスト", "画像"))
+    input_type = st.radio("英語テキストの入力方法。", ("テキスト", "画像"))
 
     if input_type == "画像":
         # 画像のアップロードとOCR処理
@@ -254,14 +257,14 @@ def main():
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
 
-    # 取得した文章を文型予測した配列を取得
-    if st.session_state.sentences:
-        api_url = "http://localhost:8000/predict"
-        data = {"text": st.session_state.sentences}
-        response = requests.post(api_url, json=data)
-        response.raise_for_status()
-        response_data = list(response.json())
-        # st.write(response_data)
+            # 取得した文章を文型予測した配列を取得
+            if st.session_state.sentences:
+                api_url = "http://localhost:8000/predict"
+                data = {"text": st.session_state.sentences}
+                response = requests.post(api_url, json=data)
+                response.raise_for_status()
+                st.session_state.response_data = list(response.json())
+                # st.write(st.session_state.response_data)
 
 
     # 文の選択
@@ -282,7 +285,7 @@ def main():
 
         # 該当する文法を表示 (仮定法、比較級、・・・)
         selected_index = st.session_state.sentences.index(selected_text)
-        preds = response_data[selected_index]
+        preds = st.session_state.response_data[selected_index]
         pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
         pred_labels_html = ""
         for label in pred_labels:
