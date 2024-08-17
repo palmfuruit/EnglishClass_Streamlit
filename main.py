@@ -2,14 +2,14 @@ import numpy as np
 import pandas as pd
 from PIL import Image, ImageDraw
 import streamlit as st
-# import ocr_main
+import ocr_main
 import stanza
 import requests
 # import nltk
 # from nltk.tokenize import sent_tokenize
 
-# OCRモデルの初期化
-# ocr_model = ocr_main.initialize_ocr()
+import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
 # セッションステートの初期化
 def initialize_session_state():
@@ -21,24 +21,28 @@ def initialize_session_state():
 
     if 'processed_files' not in st.session_state:
         st.session_state.processed_files = set()
+
     if 'nlp' not in st.session_state:
         # Stanzaの英語モデルをロードしてセッションステートに保存
         st.session_state.nlp = setup_stanza()
+    
+    if 'ocr_model' not in st.session_state:
+        st.session_state.ocr_model = ocr_main.initialize_ocr()
 
 # ファイルのアップロードとOCR処理
-def process_uploaded_files(image_files, ocr_model):
+def process_uploaded_files(image_files):
     unprocessed_files = [img for img in image_files if img.name not in st.session_state.processed_files]
     if unprocessed_files:
-        process_images(unprocessed_files, ocr_model)
+        process_images(unprocessed_files)
 
 # 画像の処理
-def process_images(unprocessed_files, ocr_model):
+def process_images(unprocessed_files):
     overWrite = st.empty()
     for idx, img in enumerate(unprocessed_files):
         with overWrite.container():
             st.write(f'{idx + 1} / {len(unprocessed_files)} 枚目の画像を処理しています・・・。')
         original_image = Image.open(img)
-        st.session_state.sentences += ocr_main.image_to_sentences(np.array(original_image), ocr_model)
+        st.session_state.sentences += ocr_main.image_to_sentences(np.array(original_image), st.session_state.ocr_model, st.session_state.nlp)
         st.session_state.processed_files.add(img.name)
     overWrite.empty()
 
@@ -247,7 +251,7 @@ def main():
     if input_type == "画像":
         # 画像のアップロードとOCR処理
         image_files = st.file_uploader('画像ファイルを選択してください。', type=['jpg', 'jpeg', 'png'], accept_multiple_files=True)
-        process_uploaded_files(image_files, ocr_model)
+        process_uploaded_files(image_files)
 
     elif input_type == "テキスト":
         # テキストボックスと解析ボタンを表示
@@ -257,15 +261,15 @@ def main():
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
 
-            # 取得した文章を文型予測した配列を取得
-            if st.session_state.sentences:
-                api_url = "http://localhost:8000/predict"
-                data = {"text": st.session_state.sentences}
-                response = requests.post(api_url, json=data)
-                response.raise_for_status()
-                st.session_state.response_data = list(response.json())
-                # st.write(st.session_state.response_data)
 
+    # 取得した文章を文型予測した配列を取得
+    if st.session_state.sentences:
+        api_url = "http://localhost:8000/predict"
+        data = {"text": st.session_state.sentences}
+        response = requests.post(api_url, json=data)
+        response.raise_for_status()
+        st.session_state.response_data = list(response.json())
+        # st.write(st.session_state.response_data)
 
     # 文の選択
     selected_text = ""

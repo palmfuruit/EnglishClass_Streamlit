@@ -1,10 +1,8 @@
 ### 文章の分割
-from textblob import TextBlob
-
-def split_into_sentences(text):
-    blob = TextBlob(text)
-    sentence_list = blob.sentences
-    sentence_list = [str(sentence) for sentence in sentence_list]
+def split_into_sentences(text, nlp):
+    # テキストを解析して文ごとに分割
+    doc = nlp(text)
+    sentence_list = [sentence.text for sentence in doc.sentences]
 
     return sentence_list
 
@@ -12,19 +10,19 @@ def split_into_sentences(text):
 ### スペースなしでつながっている単語を分割
 import wordninja
 import re
-import spacy
-nlp = spacy.load("en_core_web_sm")
 
-def separate_words(text):
-    # spacyを使ってテキストをトークンに分割
+def separate_words(text, nlp):
+    # Stanzaを使ってテキストをトークンに分割
     doc = nlp(text)
     split_tokens = []
 
-    for token in doc:
-        if token.is_alpha:  # 単語のみを処理
-            split_tokens.extend(wordninja.split(token.text))
-        else:
-            split_tokens.append(token.text)
+    for sentence in doc.sentences:
+        for token in sentence.tokens:
+            word = token.text
+            if word.isalpha():  # 単語のみを処理
+                split_tokens.extend(wordninja.split(word))
+            else:
+                split_tokens.append(word)
     
     cleaned_text = ''
     for i, token in enumerate(split_tokens):

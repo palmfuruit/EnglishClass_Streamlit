@@ -8,9 +8,9 @@ import ocr_lib
 
 ### Functions ####
 def initialize_ocr():
-    return PaddleOCR(use_angle_cls=True, lang='en') # need to run only once to download and load model into memory
+    return PaddleOCR(use_angle_cls=True, lang='en')
 
-def image_to_sentences(image, ocr_model):
+def image_to_sentences(image, ocr_model, nlp):
     ocr_result = ocr_model.ocr(image, cls=False)
 
     ### text, box
@@ -61,12 +61,13 @@ def image_to_sentences(image, ocr_model):
 
 
     ### 単語の分割
-    murged_texts = list(map(ocr_lib.separate_words, murged_texts))
+    murged_texts = [ocr_lib.separate_words(text, nlp) for text in murged_texts]
+
 
     ### 文章ごとに分割
     sentences = []
     for text in murged_texts:
-        sentences += ocr_lib.split_into_sentences(text)
+        sentences += ocr_lib.split_into_sentences(text, nlp)
 
     ### 先頭文字以外を小文字
     sentences = list(map(ocr_lib.capitalize, sentences))
