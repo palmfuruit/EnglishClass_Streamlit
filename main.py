@@ -191,7 +191,7 @@ def display_token_info(doc):
         # "End": [word.end_char for sentence in doc.sentences for word in sentence.words]
     }
     token_df = pd.DataFrame(token_data)
-    st.dataframe(token_df)
+    st.dataframe(token_df, width=1200)
 
 
 def determine_sentence_pattern(spans):
@@ -293,6 +293,7 @@ def main():
 
         # st.write(f'<span style="background:pink">{"　".join(pred_labels)}</span>', unsafe_allow_html=True)
         st.write(pred_labels_html, unsafe_allow_html=True)
+        # st.write(preds)
         
 
         if subordinate_clause_sentence:
@@ -305,7 +306,7 @@ def main():
             st.markdown(main_clause_sentence, unsafe_allow_html=True)
         
         # トークン情報の表を出力 (開発用)
-        # display_token_info(doc)
+        display_token_info(doc)
 
     # 凡例を表示
     display_legend()
