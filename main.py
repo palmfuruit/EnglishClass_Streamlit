@@ -275,7 +275,23 @@ def main():
     selected_text = ""
     if st.session_state.sentences:
         with st.sidebar:
-            selected_text = st.radio("文を選択してください。", st.session_state.sentences)
+            selected_grammar = st.selectbox('使用している文法でフィルタ', grammer_labels, index=None)
+            if selected_grammar == None:
+                selected_text = st.radio("文を選択してください。", st.session_state.sentences)
+            else:
+                # Filter sentences based on the selected grammatical label
+                filtered_sentences = []
+                for i, preds in enumerate(st.session_state.response_data):
+                    pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
+                    if selected_grammar in pred_labels:
+                        filtered_sentences.append(st.session_state.sentences[i])
+                
+                if filtered_sentences:
+                    # Display only filtered sentences
+                    selected_text = st.radio("文を選択してください。", filtered_sentences)
+                else:
+                    # Show a message if no sentences match the selected grammar
+                    st.write("選択された文法に一致する文がありません。")                
 
     st.divider() # 水平線
     if selected_text:
