@@ -29,6 +29,9 @@ def initialize_session_state():
     if 'ocr_model' not in st.session_state:
         st.session_state.ocr_model = ocr_main.initialize_ocr()
 
+    if 'image_files' not in st.session_state:
+        st.session_state.image_files = []
+
 # ファイルのアップロードとOCR処理
 def process_uploaded_files(image_files):
     unprocessed_files = [img for img in image_files if img.name not in st.session_state.processed_files]
@@ -239,6 +242,19 @@ grammer_labels = [
     '関係副詞'
 ]
 
+def predict_grammer_label():
+    if st.session_state.sentences:
+        api_url = "http://localhost:8000/predict"
+        data = {"text": st.session_state.sentences}
+        response = requests.post(api_url, json=data)
+        response.raise_for_status()
+        st.session_state.response_data = list(response.json())
+        # st.write(st.session_state.response_data)
+
+def on_file_upload():
+    process_uploaded_files(st.session_state.image_files)
+    predict_grammer_label()
+
 # メイン関数
 def main():
     initialize_session_state()
@@ -250,9 +266,8 @@ def main():
 
     if input_type == "画像":
         # 画像のアップロードとOCR処理
-        image_files = st.file_uploader('画像ファイルを選択してください。', type=['jpg', 'jpeg', 'png'], accept_multiple_files=True)
-        process_uploaded_files(image_files)
-
+        image_files = st.file_uploader('画像ファイルを選択してください。', type=['jpg', 'jpeg', 'png'],
+                                        accept_multiple_files=True, on_change=on_file_upload, key='image_files')
     elif input_type == "テキスト":
         # テキストボックスと解析ボタンを表示
         text_input = st.text_area("英語のテキストを入力してください:", height=300)
@@ -260,16 +275,8 @@ def main():
             # 入力されたテキストをStanzaで文に分割して保持
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
+            predict_grammer_label()
 
-
-    # 取得した文章を文型予測した配列を取得
-    if st.session_state.sentences:
-        api_url = "http://localhost:8000/predict"
-        data = {"text": st.session_state.sentences}
-        response = requests.post(api_url, json=data)
-        response.raise_for_status()
-        st.session_state.response_data = list(response.json())
-        # st.write(st.session_state.response_data)
 
     # 文の選択
     selected_text = ""
