@@ -19,9 +19,6 @@ def initialize_session_state():
     if 'response_data' not in st.session_state:
         st.session_state.response_data = []
 
-    if 'processed_files' not in st.session_state:
-        st.session_state.processed_files = set()
-
     if 'nlp' not in st.session_state:
         # Stanzaの英語モデルをロードしてセッションステートに保存
         st.session_state.nlp = setup_stanza()
@@ -32,21 +29,14 @@ def initialize_session_state():
     if 'image_files' not in st.session_state:
         st.session_state.image_files = []
 
-# ファイルのアップロードとOCR処理
-def process_uploaded_files(image_files):
-    unprocessed_files = [img for img in image_files if img.name not in st.session_state.processed_files]
-    if unprocessed_files:
-        process_images(unprocessed_files)
 
 # 画像の処理
-def process_images(unprocessed_files):
+def process_image(image_file):
     overWrite = st.empty()
-    for idx, img in enumerate(unprocessed_files):
-        with overWrite.container():
-            st.write(f'{idx + 1} / {len(unprocessed_files)} 枚目の画像を処理しています・・・。')
-        original_image = Image.open(img)
-        st.session_state.sentences += ocr_main.image_to_sentences(np.array(original_image), st.session_state.ocr_model, st.session_state.nlp)
-        st.session_state.processed_files.add(img.name)
+    with overWrite.container():
+        st.write(f'画像からテキストを読みだし中・・・。')
+        original_image = Image.open(image_file)
+        st.session_state.sentences = ocr_main.image_to_sentences(np.array(original_image), st.session_state.ocr_model, st.session_state.nlp)
     overWrite.empty()
 
 # Stanzaのセットアップと文の解析
@@ -243,6 +233,7 @@ grammer_labels = [
 ]
 
 def predict_grammer_label():
+    print('--------- predict_grammer_label() Entry --------')
     if st.session_state.sentences:
         api_url = "http://localhost:8000/predict"
         data = {"text": st.session_state.sentences}
@@ -252,8 +243,9 @@ def predict_grammer_label():
         # st.write(st.session_state.response_data)
 
 def on_file_upload():
-    process_uploaded_files(st.session_state.image_files)
-    predict_grammer_label()
+    if st.session_state.image_files:
+        process_image(st.session_state.image_files)
+        predict_grammer_label()
 
 # メイン関数
 def main():
@@ -267,7 +259,8 @@ def main():
     if input_type == "画像":
         # 画像のアップロードとOCR処理
         image_files = st.file_uploader('画像ファイルを選択してください。', type=['jpg', 'jpeg', 'png'],
-                                        accept_multiple_files=True, on_change=on_file_upload, key='image_files')
+                                        accept_multiple_files=False, on_change=on_file_upload, key='image_files')
+                                        
     elif input_type == "テキスト":
         # テキストボックスと解析ボタンを表示
         text_input = st.text_area("英語のテキストを入力してください:", height=300)
@@ -302,38 +295,40 @@ def main():
 
     st.divider() # 水平線
     if selected_text:
-        # 主語や動詞にアンダーラインを引く
-        main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, st.session_state.nlp)
+        # # 主語や動詞にアンダーラインを引く
+        # main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, st.session_state.nlp)
 
-        # 文型
-        spans = extract_spans(doc)
-        sentence_pattern = determine_sentence_pattern(spans)
-        st.write(sentence_pattern)
+        # # 文型
+        # spans = extract_spans(doc)
+        # sentence_pattern = determine_sentence_pattern(spans)
+        # st.write(sentence_pattern)
 
-        # 該当する文法を表示 (仮定法、比較級、・・・)
-        selected_index = st.session_state.sentences.index(selected_text)
-        preds = st.session_state.response_data[selected_index]
-        pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
-        pred_labels_html = ""
-        for label in pred_labels:
-            pred_labels_html += f"<span style='background-color: pink; padding: 2px 4px; margin-right: 5px;'>{label}</span>"
+        # # 該当する文法を表示 (仮定法、比較級、・・・)
+        # selected_index = st.session_state.sentences.index(selected_text)
+        # preds = st.session_state.response_data[selected_index]
+        # pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
+        # pred_labels_html = ""
+        # for label in pred_labels:
+        #     pred_labels_html += f"<span style='background-color: pink; padding: 2px 4px; margin-right: 5px;'>{label}</span>"
 
-        # st.write(f'<span style="background:pink">{"　".join(pred_labels)}</span>', unsafe_allow_html=True)
-        st.write(pred_labels_html, unsafe_allow_html=True)
-        # st.write(preds)
+        # # st.write(f'<span style="background:pink">{"　".join(pred_labels)}</span>', unsafe_allow_html=True)
+        # st.write(pred_labels_html, unsafe_allow_html=True)
+        # # st.write(preds)
         
 
-        if subordinate_clause_sentence:
-            st.write('<主節>')
-            st.markdown(main_clause_sentence, unsafe_allow_html=True)
-            st.write('  ')
-            st.write('<従属節>')
-            st.markdown(subordinate_clause_sentence, unsafe_allow_html=True)
-        else:
-            st.markdown(main_clause_sentence, unsafe_allow_html=True)
+        # if subordinate_clause_sentence:
+        #     st.write('<主節>')
+        #     st.markdown(main_clause_sentence, unsafe_allow_html=True)
+        #     st.write('  ')
+        #     st.write('<従属節>')
+        #     st.markdown(subordinate_clause_sentence, unsafe_allow_html=True)
+        # else:
+        #     st.markdown(main_clause_sentence, unsafe_allow_html=True)
         
-        # トークン情報の表を出力 (開発用)
-        display_token_info(doc)
+        # # トークン情報の表を出力 (開発用)
+        # display_token_info(doc)
+
+        st.write(selected_text)
 
     # 凡例を表示
     display_legend()
