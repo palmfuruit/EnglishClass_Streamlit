@@ -32,16 +32,19 @@ def initialize_session_state():
 
     if 'image_files' not in st.session_state:
         st.session_state.image_files = []
-
+    
+    if 'uploaded_image' not in st.session_state:
+        st.session_state.uploaded_image = None
 
 # 画像の処理
 def process_image(image_file):
     overWrite = st.empty()
     with overWrite.container():
-        st.write(f'画像からテキストを読みだし中・・・。')
+        st.info('画像からテキストを読み出し中・・・。')
         original_image = Image.open(image_file)
-        st.session_state.sentences = ocr_main.image_to_sentences(np.array(original_image), st.session_state.ocr_model, st.session_state.nlp)
+        st.session_state.sentences = ocr_main.image_to_sentences(np.array(original_image), st.session_state.ocr_model)
     overWrite.empty()
+    st.session_state.uploaded_image = original_image
 
 # Stanzaのセットアップと文の解析
 def setup_stanza():
@@ -270,6 +273,7 @@ def main():
         text_input = st.text_area("英語のテキストを入力してください:", height=300)
         if st.button("入力"):
             # 入力されたテキストをStanzaで文に分割して保持
+            st.session_state.uploaded_image = None      # 前回アップロードした画像をクリア
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
             predict_grammer_label()
@@ -279,6 +283,9 @@ def main():
     selected_text = ""
     if st.session_state.sentences:
         with st.sidebar:
+            if st.session_state.uploaded_image: 
+                st.image(st.session_state.uploaded_image, use_column_width=True)
+            
             selected_grammar = st.selectbox('使用している文法でフィルタ', grammer_labels, index=None)
             if selected_grammar == None:
                 selected_text = st.radio("文を選択してください。", st.session_state.sentences)
