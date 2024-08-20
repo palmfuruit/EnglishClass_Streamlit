@@ -7,6 +7,7 @@ import stanza
 import requests
 # import nltk
 # from nltk.tokenize import sent_tokenize
+from googletrans import Translator
 
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
@@ -25,6 +26,9 @@ def initialize_session_state():
     
     if 'ocr_model' not in st.session_state:
         st.session_state.ocr_model = ocr_main.initialize_ocr()
+
+    if 'translator' not in st.session_state:
+        st.session_state.translator = Translator()
 
     if 'image_files' not in st.session_state:
         st.session_state.image_files = []
@@ -327,8 +331,13 @@ def main():
         
         # # トークン情報の表を出力 (開発用)
         # display_token_info(doc)
-
+        
         st.write(selected_text)
+
+        if st.checkbox("翻訳文を表示"):
+            translated_text = st.session_state.translator.translate(selected_text, dest="ja")
+            st.write(translated_text.text)
+        
 
     # 凡例を表示
     display_legend()
