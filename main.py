@@ -262,7 +262,7 @@ def main():
 
     if input_type == "画像":
         # 画像のアップロードとOCR処理
-        image_files = st.file_uploader('画像ファイルを選択してください。', type=['jpg', 'jpeg', 'png'],
+        image_files = st.file_uploader('英語のテキストが記載された画像を選択', type=['jpg', 'jpeg', 'png'],
                                         accept_multiple_files=False, on_change=on_file_upload, key='image_files')
                                         
     elif input_type == "テキスト":
