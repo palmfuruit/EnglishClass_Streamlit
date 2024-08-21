@@ -107,106 +107,48 @@ def get_nlp_doc(sentence):
     return st.session_state.nlp(sentence)
 
 
-def underline_clauses(sentence, doc):
-    spans = extract_spans(doc)
-    overlap = check_for_overlap(spans)
-    
-    if overlap:
-        main_clause_sentence = apply_annotations(sentence, spans, 'main')
-        subordinate_clause_sentence = apply_annotations(sentence, spans, 'subordinate')
-        return main_clause_sentence, subordinate_clause_sentence
-    else:
-        combined_sentence = apply_annotations(sentence, spans)
-        return combined_sentence, None
-    
-def check_for_overlap(spans):
-    # 重なるアンダーラインがあるかチェック
-    main_spans = [span for span in spans if span[2] == 'main']
-    subordinate_spans = [span for span in spans if span[2] == 'subordinate']
-    
-    for main_span in main_spans:
-        for sub_span in subordinate_spans:
-            if main_span[0][0] < sub_span[0][1] and sub_span[0][0] < main_span[0][1]:
-                return True
-    return False
-
-def extract_spans(doc):
-    spans = []
-    for sentence in doc.sentences:
-        for token in sentence.words:
-            span, span_type, clause_type = get_span_info(token, sentence)
-            if span:
-                spans.append((span, span_type, clause_type))
-    return spans
-
-
-def get_span_info(token, sentence):
-    head_token = sentence.words[token.head - 1] if token.head > 0 else None
-    if token.head == 0 or (head_token and head_token.deprel == 'root'):
-        clause_type = 'main'
-    else:
-        clause_type = 'subordinate'
-
-
-    if token.deprel in ['nsubj', 'csubj', 'nsubj:pass', 'csubj:pass']:    # 主語
-        return get_subtree_span(token, sentence), 'subject', clause_type
-    elif token.deprel in ['obj']:    # 目的語
-        return get_subtree_span(token, sentence), 'direct_object', clause_type
-    elif token.deprel == 'iobj':    # 間接目的語
-        return get_subtree_span(token, sentence), 'indirect_object', clause_type
-    elif token.deprel in ['xcomp', 'ccomp']  and head_token and head_token.upos == 'VERB':
-        # 'xcomp'/'ccomp'が動詞、または節の中にBe動詞がある。→目的語
-        if token.upos == 'VERB' or any((word.deprel == "cop" and word.head == token.id) for word in sentence.words):
-            return get_subtree_span(token, sentence), 'direct_object', clause_type
-        else:
-            return get_subtree_span(token, sentence), 'complement', clause_type
-    elif token.deprel == 'root' and token.upos in ['NOUN', 'ADJ']:      # 補語 パターン2
-        return (token.start_char, token.end_char), 'complement', clause_type
-    elif token.upos == 'VERB':    # 動詞
-        if token.head == 0:
-            clause_type = 'main'
-        else:
-            clause_type = 'subordinate'
-        return (token.start_char, token.end_char), 'verb', clause_type
-    elif token.upos == 'AUX':    # 助動詞
-        return (token.start_char, token.end_char), 'auxiliary', clause_type
-    
-    return None, None, None
-
-
-def apply_annotations(sentence, spans, clause_type_filter=None):
-    offset_map = [0] * len(sentence)
-    annotated_sentence = sentence
-
-    for span, span_type, clause_type in sorted(spans, key=lambda x: x[0][0], reverse=True):
-        if clause_type_filter is None or clause_type == clause_type_filter:
-            color = get_span_color(span_type)
-            max_offset = max(offset_map[span[0]:span[1]]) if offset_map[span[0]:span[1]] else 0
-            style = f"border-bottom: 2px {'solid' if clause_type == 'main' else 'double'} {color}; padding-bottom: {max_offset}px;"
-            annotated_sentence = (
-                annotated_sentence[:span[0]] +
-                f"<span style='{style}'>{annotated_sentence[span[0]:span[1]]}</span>" +
-                annotated_sentence[span[1]:]
-            )
-            for i in range(span[0], span[1]):
-                offset_map[i] += 4
-    return annotated_sentence
-
 def get_span_color(span_type):
     colors = {
         'subject': 'blue',
         'verb': 'red',
-        'direct_object': 'yellowgreen',
+        'object': 'yellowgreen',
         'indirect_object': 'green',
         'complement': 'orange',
         'auxiliary': 'pink'
     }
     return colors.get(span_type, 'black')
 
+# 下線スタイルを適用する関数
+def apply_underline(text, color):
+    return f"<u style='text-decoration-color:{color}; text-decoration-thickness:2pt;'>{text}</u>"
 
 
 
+# 主語、動詞、目的語、補語に下線を引く関数
+def underline_clauses(text, doc):
+    underlined_text = text
+    for sentence in doc.sentences:
+        for word in sentence.words:
+            if word.head == 0:  # ROOT (主節の動詞)
+                verb = word.text
+                color = get_span_color("verb")
+                underlined_text = underlined_text.replace(verb, apply_underline(verb, color), 1)
+            elif word.deprel == "nsubj":  # 主語
+                subject = word.text
+                color = get_span_color("subject")
+                underlined_text = underlined_text.replace(subject, apply_underline(subject, color), 1)
+            elif word.deprel in ["obj", "iobj"]:  # 目的語
+                obj = word.text
+                color = get_span_color("object")
+                underlined_text = underlined_text.replace(obj, apply_underline(obj, color), 1)
+            elif word.deprel in ["xcomp", "ccomp"]:  # 補語
+                complement = word.text
+                color = get_span_color("complement")
+                underlined_text = underlined_text.replace(complement, apply_underline(complement, color), 1)
+    return underlined_text
 
+
+    
 def determine_sentence_pattern(spans):
     has_subject = False
     has_object = False
@@ -214,16 +156,15 @@ def determine_sentence_pattern(spans):
     has_object_complement = False
     has_indirect_object = False
 
-    for span, span_type, clause_type in spans:
-        if clause_type == 'main':  # Only consider spans from the main clause
-            if span_type == 'subject':
-                has_subject = True
-            elif span_type == 'direct_object':
-                has_object = True
-            elif span_type == 'indirect_object':
-                has_indirect_object = True
-            elif span_type == 'complement':
-                has_complement = True
+    for span, span_type in spans:
+        if span_type == 'subject':
+            has_subject = True
+        elif span_type == 'direct_object':
+            has_object = True
+        elif span_type == 'indirect_object':
+            has_indirect_object = True
+        elif span_type == 'complement':
+            has_complement = True
 
     if has_subject and not has_object and not has_complement:
         return "第1文型 (SV)"
@@ -318,14 +259,12 @@ def get_token_info(doc):
 def display_legend():
     legend_html = """
     <div style='border: 2px solid black; padding: 10px; margin-bottom: 20px;'>
-        <p><span style='color: blue;'>■</span> 主語 (Subject)</p>
-        <p><span style='color: red;'>■</span> 動詞 (Verb)</p>
-        <p><span style='color: yellowgreen;'>■</span> 目的語 (Object)</p>
-        <p><span style='color: green;'>■</span> 間接目的語 (Indirect Object)</p>
-        <p><span style='color: orange;'>■</span> 補語 (Complement)</p>
-        <p><span style='color: pink;'>■</span> 助動詞 (Auxiliary)</p>
-        <p><span style='border-bottom: 2px solid black; display: inline-block; width: 80px;'>      </span> 主節 (Main Clause)</p>
-        <p><span style='border-bottom: 2px double black; display: inline-block; width: 80px;'>      </span> 従属節 (Subordinate Clause)</p>
+        <p><span style='border-bottom: 2px solid blue; display: inline-block; width: 80px;'></span> 主語(Subject)</p>
+        <p><span style='border-bottom: 2px solid red; display: inline-block; width: 80px;'></span> 動詞 (Verb)</p>
+        <p><span style='border-bottom: 2px solid pink; display: inline-block; width: 80px;'></span> 助動詞 (Auxiliary)</p>
+        <p><span style='border-bottom: 2px solid yellowgreen; display: inline-block; width: 80px;'></span> 目的語 (Object)</p>
+        <p><span style='border-bottom: 2px solid green; display: inline-block; width: 80px;'></span> 間接目的語 (Indirect Object)</p>
+        <p><span style='border-bottom: 2px solid orange; display: inline-block; width: 80px;'></span> 補語 (Complement)</p>
     </div>
     """
     st.markdown(legend_html, unsafe_allow_html=True)
@@ -371,25 +310,15 @@ def main():
 
         # # 主語や動詞にアンダーラインを引く
         doc = get_nlp_doc(selected_text)
-        # main_clause_sentence, subordinate_clause_sentence = underline_clauses(selected_text)
+        main_clause_sentence = underline_clauses(selected_text, doc)
+        st.markdown(main_clause_sentence, unsafe_allow_html=True)
 
-
-        # if subordinate_clause_sentence:
-        #     st.write('<主節>')
-        #     st.markdown(main_clause_sentence, unsafe_allow_html=True)
-        #     st.write('  ')
-        #     st.write('<従属節>')
-        #     st.markdown(subordinate_clause_sentence, unsafe_allow_html=True)
-        # else:
-        #     st.markdown(main_clause_sentence, unsafe_allow_html=True)
-        
 
         # # 文型
         # spans = extract_spans(doc)
         # sentence_pattern = determine_sentence_pattern(spans)
         # st.write(sentence_pattern)
         
-        st.write(selected_text)
 
         if st.checkbox("翻訳文を表示"):
             translated_text = translate(selected_text)
