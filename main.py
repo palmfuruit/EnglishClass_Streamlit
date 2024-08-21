@@ -239,8 +239,20 @@ grammer_labels = [
     '関係副詞'
 ]
 
+# 文法ラベルにそれぞれの文法に適合している文の数を追加する関数
+def get_grammar_label_with_counts():
+    label_counts = {label: 0 for label in grammer_labels}
+    
+    for preds in st.session_state.response_data:
+        for idx, label in enumerate(preds):
+            if label == 1.0:
+                label_counts[grammer_labels[idx]] += 1
+    
+    labeled_grammar_labels = [f"{label} ({count})" for label, count in label_counts.items()]
+    return labeled_grammar_labels
+
 def predict_grammer_label():
-    print('--------- predict_grammer_label() Entry --------')
+    print('--------- predict_grammer_label() Start --------')
     if st.session_state.sentences:
         api_url = "http://localhost:8000/predict"
         data = {"text": st.session_state.sentences}
@@ -248,6 +260,7 @@ def predict_grammer_label():
         response.raise_for_status()
         st.session_state.response_data = list(response.json())
         # st.write(st.session_state.response_data)
+    print('--------- predict_grammer_label() End --------')
 
 def on_file_upload():
     if st.session_state.image_files:
@@ -286,11 +299,14 @@ def main():
             if st.session_state.uploaded_image: 
                 st.image(st.session_state.uploaded_image, use_column_width=True)
             
-            selected_grammar = st.selectbox('使用している文法でフィルタ', grammer_labels, index=None)
+            grammar_labels_with_counts = get_grammar_label_with_counts()
+            selected_grammar = st.selectbox('使用している文法でフィルタ', grammar_labels_with_counts, index=None)
+            if selected_grammar:
+                selected_grammar = selected_grammar.split(' (')[0]
+
             if selected_grammar == None:
                 selected_text = st.radio("文を選択してください。", st.session_state.sentences)
             else:
-                # Filter sentences based on the selected grammatical label
                 filtered_sentences = []
                 for i, preds in enumerate(st.session_state.response_data):
                     pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
@@ -306,6 +322,17 @@ def main():
 
     st.divider() # 水平線
     if selected_text:
+        # 該当する文法を表示 (仮定法、比較級、・・・)
+        selected_index = st.session_state.sentences.index(selected_text)
+        preds = st.session_state.response_data[selected_index]
+        pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
+        pred_labels_html = ""
+        for label in pred_labels:
+            pred_labels_html += f"<span style='background-color: pink; padding: 2px 4px; margin-right: 5px;'>{label}</span>"
+
+        st.write(pred_labels_html, unsafe_allow_html=True)
+        
+
         # # 主語や動詞にアンダーラインを引く
         # main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, st.session_state.nlp)
 
@@ -314,18 +341,6 @@ def main():
         # sentence_pattern = determine_sentence_pattern(spans)
         # st.write(sentence_pattern)
 
-        # # 該当する文法を表示 (仮定法、比較級、・・・)
-        # selected_index = st.session_state.sentences.index(selected_text)
-        # preds = st.session_state.response_data[selected_index]
-        # pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
-        # pred_labels_html = ""
-        # for label in pred_labels:
-        #     pred_labels_html += f"<span style='background-color: pink; padding: 2px 4px; margin-right: 5px;'>{label}</span>"
-
-        # # st.write(f'<span style="background:pink">{"　".join(pred_labels)}</span>', unsafe_allow_html=True)
-        # st.write(pred_labels_html, unsafe_allow_html=True)
-        # # st.write(preds)
-        
 
         # if subordinate_clause_sentence:
         #     st.write('<主節>')
