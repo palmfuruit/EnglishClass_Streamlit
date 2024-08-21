@@ -291,7 +291,7 @@ def get_grammar_label_with_counts():
 
 @st.cache_data
 def predict_grammer_label(sentences):
-    print('--------- predict_grammer_label() Start --------')
+    print('--------- API Call Start --------')
     if st.session_state.sentences:
         api_url = "http://localhost:8000/predict"
         data = {"text": sentences}
@@ -299,8 +299,20 @@ def predict_grammer_label(sentences):
         response.raise_for_status()
         response_data = list(response.json())
         # st.write(st.session_state.response_data)
-    print('--------- predict_grammer_label() End --------')
+    print('--------- API Call End --------')
     return response_data
+
+@st.cache_data
+# 文が該当する文法を表示 (仮定法、比較級、・・・)
+def sentence_to_grammer_label(selected_text):
+    selected_index = st.session_state.sentences.index(selected_text)
+    preds = st.session_state.response_data[selected_index]
+    pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
+    pred_labels_html = ""
+    for label in pred_labels:
+        pred_labels_html += f"<span style='background-color: pink; padding: 2px 4px; margin-right: 5px;'>{label}</span>"
+
+    return pred_labels_html
 
 @st.cache_data
 def translate(en_text):
@@ -341,14 +353,8 @@ def main():
 
     st.divider() # 水平線
     if selected_text:
-        # 該当する文法を表示 (仮定法、比較級、・・・)
-        selected_index = st.session_state.sentences.index(selected_text)
-        preds = st.session_state.response_data[selected_index]
-        pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
-        pred_labels_html = ""
-        for label in pred_labels:
-            pred_labels_html += f"<span style='background-color: pink; padding: 2px 4px; margin-right: 5px;'>{label}</span>"
-
+        # 英文が該当する文法を表示 (仮定法、比較級、・・・)        
+        pred_labels_html = sentence_to_grammer_label(selected_text)
         st.write(pred_labels_html, unsafe_allow_html=True)
         
 
