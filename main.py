@@ -36,6 +36,13 @@ def initialize_session_state():
     if 'uploaded_image' not in st.session_state:
         st.session_state.uploaded_image = None
 
+
+# 画像ファイルUpload
+def on_file_upload():
+    if st.session_state.image_files:
+        process_image(st.session_state.image_files)
+        predict_grammer_label()
+
 # 画像の処理
 def process_image(image_file):
     overWrite = st.empty()
@@ -262,10 +269,6 @@ def predict_grammer_label():
         # st.write(st.session_state.response_data)
     print('--------- predict_grammer_label() End --------')
 
-def on_file_upload():
-    if st.session_state.image_files:
-        process_image(st.session_state.image_files)
-        predict_grammer_label()
 
 @st.cache_data
 def translate(en_text):
