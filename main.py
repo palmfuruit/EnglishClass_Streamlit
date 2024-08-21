@@ -267,6 +267,11 @@ def on_file_upload():
         process_image(st.session_state.image_files)
         predict_grammer_label()
 
+@st.cache_data
+def translate(en_text):
+    translated_obj = st.session_state.translator.translate(en_text, dest="ja")
+    return translated_obj.text
+
 # メイン関数
 def main():
     initialize_session_state()
@@ -357,8 +362,8 @@ def main():
         st.write(selected_text)
 
         if st.checkbox("翻訳文を表示"):
-            translated_text = st.session_state.translator.translate(selected_text, dest="ja")
-            st.write(translated_text.text)
+            translated_text = translate(selected_text)
+            st.write(translated_text)
         
 
     # 凡例を表示
