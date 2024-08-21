@@ -344,8 +344,8 @@ def main():
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
 
-
-    st.session_state.response_data = predict_grammer_label(st.session_state.sentences)
+    if st.session_state.sentences:
+        st.session_state.response_data = predict_grammer_label(st.session_state.sentences)
 
     # 文の選択
     selected_text = select_text_to_read()
