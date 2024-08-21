@@ -102,20 +102,24 @@ def get_subtree_span(token, sentence):
 
     return start, end
 
+@st.cache_data
+def get_nlp_doc(sentence):
+    return st.session_state.nlp(sentence)
 
-def underline_clauses(sentence, nlp):
-    doc = nlp(sentence)
+
+def underline_clauses(sentence, doc):
+    # doc = nlp(sentence)
     spans = extract_spans(doc)
     overlap = check_for_overlap(spans)
     
     if overlap:
         main_clause_sentence = apply_annotations(sentence, spans, 'main')
         subordinate_clause_sentence = apply_annotations(sentence, spans, 'subordinate')
-        return main_clause_sentence, subordinate_clause_sentence, doc
+        return main_clause_sentence, subordinate_clause_sentence
     else:
         combined_sentence = apply_annotations(sentence, spans)
-        return combined_sentence, None, doc
-
+        return combined_sentence, None
+    
 def check_for_overlap(spans):
     # 重なるアンダーラインがあるかチェック
     main_spans = [span for span in spans if span[2] == 'main']
@@ -200,20 +204,6 @@ def get_span_color(span_type):
     }
     return colors.get(span_type, 'black')
 
-def display_legend():
-    legend_html = """
-    <div style='border: 2px solid black; padding: 10px; margin-bottom: 20px;'>
-        <p><span style='color: blue;'>■</span> 主語 (Subject)</p>
-        <p><span style='color: red;'>■</span> 動詞 (Verb)</p>
-        <p><span style='color: yellowgreen;'>■</span> 目的語 (Object)</p>
-        <p><span style='color: green;'>■</span> 間接目的語 (Indirect Object)</p>
-        <p><span style='color: orange;'>■</span> 補語 (Complement)</p>
-        <p><span style='color: pink;'>■</span> 助動詞 (Auxiliary)</p>
-        <p><span style='border-bottom: 2px solid black; display: inline-block; width: 80px;'>      </span> 主節 (Main Clause)</p>
-        <p><span style='border-bottom: 2px double black; display: inline-block; width: 80px;'>      </span> 従属節 (Subordinate Clause)</p>
-    </div>
-    """
-    st.markdown(legend_html, unsafe_allow_html=True)
 
 def display_token_info(doc):
     token_data = {
@@ -320,6 +310,23 @@ def translate(en_text):
     return translated_obj.text
 
 
+@st.cache_data
+def display_legend():
+    legend_html = """
+    <div style='border: 2px solid black; padding: 10px; margin-bottom: 20px;'>
+        <p><span style='color: blue;'>■</span> 主語 (Subject)</p>
+        <p><span style='color: red;'>■</span> 動詞 (Verb)</p>
+        <p><span style='color: yellowgreen;'>■</span> 目的語 (Object)</p>
+        <p><span style='color: green;'>■</span> 間接目的語 (Indirect Object)</p>
+        <p><span style='color: orange;'>■</span> 補語 (Complement)</p>
+        <p><span style='color: pink;'>■</span> 助動詞 (Auxiliary)</p>
+        <p><span style='border-bottom: 2px solid black; display: inline-block; width: 80px;'>      </span> 主節 (Main Clause)</p>
+        <p><span style='border-bottom: 2px double black; display: inline-block; width: 80px;'>      </span> 従属節 (Subordinate Clause)</p>
+    </div>
+    """
+    st.markdown(legend_html, unsafe_allow_html=True)
+
+
 
 # メイン関数
 def main():
@@ -359,7 +366,8 @@ def main():
         
 
         # # 主語や動詞にアンダーラインを引く
-        # main_clause_sentence, subordinate_clause_sentence, doc = underline_clauses(selected_text, st.session_state.nlp)
+        doc = get_nlp_doc(selected_text)
+        # main_clause_sentence, subordinate_clause_sentence = underline_clauses(selected_text)
 
         # # 文型
         # spans = extract_spans(doc)
@@ -376,8 +384,7 @@ def main():
         # else:
         #     st.markdown(main_clause_sentence, unsafe_allow_html=True)
         
-        # # トークン情報の表を出力 (開発用)
-        # display_token_info(doc)
+
         
         st.write(selected_text)
 
@@ -385,6 +392,8 @@ def main():
             translated_text = translate(selected_text)
             st.write(translated_text)
         
+        # トークン情報の表を出力 (開発用)
+        display_token_info(doc)
 
     # 凡例を表示
     display_legend()
