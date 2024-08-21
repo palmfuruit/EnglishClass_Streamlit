@@ -108,7 +108,6 @@ def get_nlp_doc(sentence):
 
 
 def underline_clauses(sentence, doc):
-    # doc = nlp(sentence)
     spans = extract_spans(doc)
     overlap = check_for_overlap(spans)
     
@@ -205,25 +204,7 @@ def get_span_color(span_type):
     return colors.get(span_type, 'black')
 
 
-def display_token_info(doc):
-    token_data = {
-        "Text": [word.text for sentence in doc.sentences for word in sentence.words],
-        "Lemma": [word.lemma for sentence in doc.sentences for word in sentence.words],
-        "POS": [word.upos for sentence in doc.sentences for word in sentence.words],
-        "Dependency": [word.deprel for sentence in doc.sentences for word in sentence.words],
-        "Head": [
-            sentence.words[word.head - 1].text if 0 < word.head <= len(sentence.words) else 'ROOT'
-            for sentence in doc.sentences for word in sentence.words
-        ],
-        "Children": [
-            [child.text for child in sentence.words if child.head == word.id]
-            for sentence in doc.sentences for word in sentence.words
-        ],
-        # "Start": [word.start_char for sentence in doc.sentences for word in sentence.words],
-        # "End": [word.end_char for sentence in doc.sentences for word in sentence.words]
-    }
-    token_df = pd.DataFrame(token_data)
-    st.dataframe(token_df, width=1200)
+
 
 
 def determine_sentence_pattern(spans):
@@ -310,6 +291,29 @@ def translate(en_text):
     return translated_obj.text
 
 
+def get_token_info(doc):
+    token_data = {
+        "Text": [word.text for sentence in doc.sentences for word in sentence.words],
+        "Lemma": [word.lemma for sentence in doc.sentences for word in sentence.words],
+        "POS": [word.upos for sentence in doc.sentences for word in sentence.words],
+        "Dependency": [word.deprel for sentence in doc.sentences for word in sentence.words],
+        "Head": [
+            sentence.words[word.head - 1].text if 0 < word.head <= len(sentence.words) else 'ROOT'
+            for sentence in doc.sentences for word in sentence.words
+        ],
+        "Children": [
+            [child.text for child in sentence.words if child.head == word.id]
+            for sentence in doc.sentences for word in sentence.words
+        ],
+        # "Start": [word.start_char for sentence in doc.sentences for word in sentence.words],
+        # "End": [word.end_char for sentence in doc.sentences for word in sentence.words]
+    }
+    token_df = pd.DataFrame(token_data)
+    return token_df
+
+
+
+
 @st.cache_data
 def display_legend():
     legend_html = """
@@ -369,11 +373,6 @@ def main():
         doc = get_nlp_doc(selected_text)
         # main_clause_sentence, subordinate_clause_sentence = underline_clauses(selected_text)
 
-        # # 文型
-        # spans = extract_spans(doc)
-        # sentence_pattern = determine_sentence_pattern(spans)
-        # st.write(sentence_pattern)
-
 
         # if subordinate_clause_sentence:
         #     st.write('<主節>')
@@ -385,6 +384,10 @@ def main():
         #     st.markdown(main_clause_sentence, unsafe_allow_html=True)
         
 
+        # # 文型
+        # spans = extract_spans(doc)
+        # sentence_pattern = determine_sentence_pattern(spans)
+        # st.write(sentence_pattern)
         
         st.write(selected_text)
 
@@ -393,7 +396,8 @@ def main():
             st.write(translated_text)
         
         # トークン情報の表を出力 (開発用)
-        display_token_info(doc)
+        token_df = get_token_info(doc)
+        st.dataframe(token_df, width=1200)
 
     # 凡例を表示
     display_legend()
