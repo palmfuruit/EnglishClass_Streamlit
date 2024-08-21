@@ -36,12 +36,15 @@ def initialize_session_state():
     if 'uploaded_image' not in st.session_state:
         st.session_state.uploaded_image = None
 
+# Stanzaのセットアップと文の解析
+def setup_stanza():
+    stanza.download('en')  # Stanzaの英語モデルをダウンロード
+    return stanza.Pipeline('en')  # パイプラインの初期化
 
 # 画像ファイルUpload
 def on_file_upload():
     if st.session_state.image_files:
         process_image(st.session_state.image_files)
-        predict_grammer_label()
 
 # 画像の処理
 def process_image(image_file):
@@ -53,10 +56,38 @@ def process_image(image_file):
     overWrite.empty()
     st.session_state.uploaded_image = original_image
 
-# Stanzaのセットアップと文の解析
-def setup_stanza():
-    stanza.download('en')  # Stanzaの英語モデルをダウンロード
-    return stanza.Pipeline('en')  # パイプラインの初期化
+# Readingするテキストを選択
+def select_text_to_read():
+    selected_text = ""
+    if st.session_state.sentences:
+        with st.sidebar:
+            if st.session_state.uploaded_image: 
+                st.image(st.session_state.uploaded_image, use_column_width=True)
+            
+            grammar_labels_with_counts = get_grammar_label_with_counts()
+            selected_grammar = st.selectbox('使用している文法でフィルタ', grammar_labels_with_counts, index=None)
+            if selected_grammar:
+                selected_grammar = selected_grammar.split(' (')[0]
+
+            if selected_grammar == None:
+                selected_text = st.radio("文を選択してください。", st.session_state.sentences)
+            else:
+                filtered_sentences = []
+                for i, preds in enumerate(st.session_state.response_data):
+                    pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
+                    if selected_grammar in pred_labels:
+                        filtered_sentences.append(st.session_state.sentences[i])
+                
+                if filtered_sentences:
+                    # Display only filtered sentences
+                    selected_text = st.radio("文を選択してください。", filtered_sentences)
+                else:
+                    # Show a message if no sentences match the selected grammar
+                    st.write("選択された文法に一致する文がありません。")    
+    
+    return selected_text
+
+
 
 def get_subtree_span(token, sentence):
     start = token.start_char
@@ -258,22 +289,25 @@ def get_grammar_label_with_counts():
     labeled_grammar_labels = [f"{label} ({count})" for label, count in label_counts.items()]
     return labeled_grammar_labels
 
-def predict_grammer_label():
+@st.cache_data
+def predict_grammer_label(sentences):
     print('--------- predict_grammer_label() Start --------')
     if st.session_state.sentences:
         api_url = "http://localhost:8000/predict"
-        data = {"text": st.session_state.sentences}
+        data = {"text": sentences}
         response = requests.post(api_url, json=data)
         response.raise_for_status()
-        st.session_state.response_data = list(response.json())
+        response_data = list(response.json())
         # st.write(st.session_state.response_data)
     print('--------- predict_grammer_label() End --------')
-
+    return response_data
 
 @st.cache_data
 def translate(en_text):
     translated_obj = st.session_state.translator.translate(en_text, dest="ja")
     return translated_obj.text
+
+
 
 # メイン関数
 def main():
@@ -297,36 +331,13 @@ def main():
             st.session_state.uploaded_image = None      # 前回アップロードした画像をクリア
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
-            predict_grammer_label()
 
+
+    st.session_state.response_data = predict_grammer_label(st.session_state.sentences)
 
     # 文の選択
-    selected_text = ""
-    if st.session_state.sentences:
-        with st.sidebar:
-            if st.session_state.uploaded_image: 
-                st.image(st.session_state.uploaded_image, use_column_width=True)
+    selected_text = select_text_to_read()
             
-            grammar_labels_with_counts = get_grammar_label_with_counts()
-            selected_grammar = st.selectbox('使用している文法でフィルタ', grammar_labels_with_counts, index=None)
-            if selected_grammar:
-                selected_grammar = selected_grammar.split(' (')[0]
-
-            if selected_grammar == None:
-                selected_text = st.radio("文を選択してください。", st.session_state.sentences)
-            else:
-                filtered_sentences = []
-                for i, preds in enumerate(st.session_state.response_data):
-                    pred_labels = [grammer_labels[idx] for idx, label in enumerate(preds) if label == 1.0]
-                    if selected_grammar in pred_labels:
-                        filtered_sentences.append(st.session_state.sentences[i])
-                
-                if filtered_sentences:
-                    # Display only filtered sentences
-                    selected_text = st.radio("文を選択してください。", filtered_sentences)
-                else:
-                    # Show a message if no sentences match the selected grammar
-                    st.write("選択された文法に一致する文がありません。")                
 
     st.divider() # 水平線
     if selected_text:
