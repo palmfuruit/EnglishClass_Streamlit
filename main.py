@@ -126,28 +126,46 @@ def apply_underline(text, color):
 # 主語、動詞、目的語、補語に下線を引く関数
 def underline_clauses(text, doc):
     underlined_text = text
+    
     for sentence in doc.sentences:
+        root_id = next((word.id for word in sentence.words if word.head == 0), None)
+
         for word in sentence.words:
-            if word.head == 0:  # ROOT (主節の動詞)
+            if (word.head == 0) and (word.pos == 'VERB'):
+                # ROOT (主節の動詞)
                 verb = word.text
                 color = get_span_color("verb")
                 underlined_text = underlined_text.replace(verb, apply_underline(verb, color), 1)
-            elif word.pos == 'AUX':
-                auxiliary = word.text
-                color = get_span_color("auxiliary")
-                underlined_text = underlined_text.replace(auxiliary, apply_underline(auxiliary, color), 1)
-            elif "subj" in word.deprel:  # 主語
-                subject = word.text
-                color = get_span_color("subject")
-                underlined_text = underlined_text.replace(subject, apply_underline(subject, color), 1)
-            elif word.deprel in ["obj", "iobj"]:  # 目的語
-                obj = word.text
-                color = get_span_color("object")
-                underlined_text = underlined_text.replace(obj, apply_underline(obj, color), 1)
-            elif word.deprel in ["xcomp", "ccomp"]:  # 補語
+            if (word.head == 0) and (word.pos in ['NOUN', 'PRON', 'ADJ']):
+                # ROOT (名詞 or 形容詞)
                 complement = word.text
                 color = get_span_color("complement")
                 underlined_text = underlined_text.replace(complement, apply_underline(complement, color), 1)
+            elif (word.head == root_id) and (word.pos == 'AUX'):
+                # 助動詞
+                auxiliary = word.text
+                color = get_span_color("auxiliary")
+                underlined_text = underlined_text.replace(auxiliary, apply_underline(auxiliary, color), 1)
+            elif (word.head == root_id) and ("subj" in word.deprel):
+                # 主語
+                subject = word.text
+                color = get_span_color("subject")
+                underlined_text = underlined_text.replace(subject, apply_underline(subject, color), 1)
+            elif (word.head == root_id) and (word.deprel in ["obj"]):
+                # 目的語
+                obj = word.text
+                color = get_span_color("object")
+                underlined_text = underlined_text.replace(obj, apply_underline(obj, color), 1)
+            elif (word.head == root_id) and (word.deprel in ["iobj"]):
+                # 間接目的語
+                indirect_object = word.text
+                color = get_span_color("indirect_object")
+                underlined_text = underlined_text.replace(indirect_object, apply_underline(indirect_object, color), 1)
+            # elif word.deprel in ["xcomp", "ccomp"]:
+            #     # 補語
+            #     complement = word.text
+            #     color = get_span_color("complement")
+            #     underlined_text = underlined_text.replace(complement, apply_underline(complement, color), 1)
     return underlined_text
 
 
@@ -247,7 +265,7 @@ def get_token_info(doc):
                 # 'XPOS': word.xpos,      # 言語固有の品詞タグ
                 'Dependency': word.deprel,
                 'Head': sentence.words[word.head - 1].text if 0 < word.head else 'ROOT',
-                'Children': [child.text for child in sentence.words if child.head == word.id],
+                # 'Children': [child.text for child in sentence.words if child.head == word.id],
                 # 'Feats': word.feats,
                 # 'Deps': word.deps,
                 # 'ID': word.id,
@@ -301,8 +319,8 @@ def main():
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
 
-    if st.session_state.sentences:
-        st.session_state.response_data = predict_grammer_label(st.session_state.sentences)
+    # if st.session_state.sentences:
+    #     st.session_state.response_data = predict_grammer_label(st.session_state.sentences)
 
     # 文の選択
     selected_text = select_text_to_read()
@@ -310,9 +328,9 @@ def main():
 
     st.divider() # 水平線
     if selected_text:
-        # 英文が該当する文法を表示 (仮定法、比較級、・・・)        
-        pred_labels_html = sentence_to_grammer_label(selected_text)
-        st.write(pred_labels_html, unsafe_allow_html=True)
+        # # 英文が該当する文法を表示 (仮定法、比較級、・・・)        
+        # pred_labels_html = sentence_to_grammer_label(selected_text)
+        # st.write(pred_labels_html, unsafe_allow_html=True)
         
 
         # # 主語や動詞にアンダーラインを引く
