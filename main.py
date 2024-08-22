@@ -147,14 +147,16 @@ def extract_target_tokens(doc):
                 span_type = "object"
             elif (word.head == root_id) and (word.deprel in ["iobj"]):
                 span_type = "indirect_object"
-            elif (word.head == root_id) and (word.deprel in ["xcomp"]):
+            elif (word.head == root_id) and (word.deprel in ["xcomp"]) and (word.pos in ['NOUN', 'PRON', 'ADJ']):
                 span_type = "objective_complement"       
 
             # 名詞が対象の場合、冠詞のチェックを行う
             if word.pos =='NOUN':
                 # 名詞に関連する冠詞をチェック
                 for det in sentence.words:
-                    if det.pos == 'DET' and det.head == word.id:
+                    # if det.pos == 'DET' and det.head == word.id:
+                    if (det.pos == 'DET' and det.head == word.id) or \
+                       (det.pos == 'PRON' and det.deprel == 'nmod:poss' and det.head == word.id):
                         start_idx = det.start_char  # 開始位置を冠詞の位置に変更
                         break
 
