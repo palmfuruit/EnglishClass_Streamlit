@@ -123,7 +123,6 @@ def get_span_color(span_type):
 def apply_underline(text, color):
     return f"<span style='border-bottom: 2pt solid {color}; position: relative;'>{text}</span>"
 
-
 def extract_target_tokens(doc):
     target_tokens = []
     
@@ -157,8 +156,22 @@ def extract_target_tokens(doc):
                             start_idx = ccomp_word.start_char  # ccompが前にある場合、開始位置を更新
                         if ccomp_word.end_char > end_idx:
                             end_idx = ccomp_word.end_char  # ccompが後にある場合、終了位置を更新
+            elif (word.head in [w.id for w in sentence.words if w.deprel == "xcomp" and w.head == root_id]) and (word.deprel == "obj"):
+                # xcompがrootの動詞に接続していて、そのxcompがobjを持つ場合、目的語として扱う
+                span_type = "object"
+                xcomp_word = next(w for w in sentence.words if w.id == word.head)
+                start_idx = min(start_idx, xcomp_word.start_char)
+                end_idx = max(end_idx, xcomp_word.end_char)
             elif (word.head == root_id) and (word.deprel in ["xcomp"]) and (word.pos in ['NOUN', 'PRON','PROPN', 'ADJ']):
-                span_type = "objective_complement"       
+                span_type = "objective_complement"
+                
+                # objective_complementのheadに対応するトークンを含める
+                for related_word in sentence.words:
+                    if related_word.head == word.id:
+                        if related_word.start_char < start_idx:
+                            start_idx = related_word.start_char
+                        if related_word.end_char > end_idx:
+                            end_idx = related_word.end_char       
 
             # 名詞が対象の場合、冠詞のチェックを行う
             if word.pos in ['NOUN', 'PRON','PROPN']:
@@ -173,8 +186,6 @@ def extract_target_tokens(doc):
                 # compound関係のチェック
                 for related_word in sentence.words:
                     if related_word.head == word.id and related_word.deprel == 'compound':
-                        print('word: ', word.text)
-                        print('related_word: ', related_word.text)
                         if related_word.start_char < start_idx:
                             start_idx = related_word.start_char
                         if related_word.end_char > end_idx:
@@ -196,6 +207,7 @@ def extract_target_tokens(doc):
                 })
 
     return target_tokens
+
 
 
 def apply_underline_to_text(text, target_tokens):
