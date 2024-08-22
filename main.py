@@ -160,6 +160,11 @@ def extract_target_tokens(doc):
                         start_idx = det.start_char  # 開始位置を冠詞の位置に変更
                         break
 
+            # 'flat' dependency の場合、同じ単語として扱う
+            for related_word in sentence.words:
+                if related_word.head == word.id and related_word.deprel == 'flat':
+                    end_idx = related_word.end_char 
+
             if span_type:
                 color = get_span_color(span_type)
                 target_tokens.append({
