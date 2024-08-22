@@ -155,7 +155,7 @@ def extract_target_tokens(doc):
                     if ccomp_word.head == word.id:
                         if ccomp_word.start_char < start_idx:
                             start_idx = ccomp_word.start_char  # ccompが前にある場合、開始位置を更新
-                        else:
+                        if ccomp_word.end_char > end_idx:
                             end_idx = ccomp_word.end_char  # ccompが後にある場合、終了位置を更新
             elif (word.head == root_id) and (word.deprel in ["xcomp"]) and (word.pos in ['NOUN', 'PRON','PROPN', 'ADJ']):
                 span_type = "objective_complement"       
@@ -171,10 +171,11 @@ def extract_target_tokens(doc):
                 # compound関係のチェック
                 for related_word in sentence.words:
                     if related_word.head == word.id and related_word.deprel == 'compound':
-                        print('related_word: ', related_word)
+                        print('word: ', word.text)
+                        print('related_word: ', related_word.text)
                         if related_word.start_char < start_idx:
                             start_idx = related_word.start_char
-                        else:
+                        if related_word.end_char > end_idx:
                             end_idx = related_word.end_char
 
             # 'flat' dependency の場合、同じ単語として扱う
