@@ -10,38 +10,27 @@
 
 
 # ### スペースなしでつながっている単語を分割
-# import wordninja
-# import re
-# import spacy
-# nlp = spacy.load("en_core_web_sm")
+import wordninja
+import re
 
-# def separate_words(text):
-#     # spacyを使ってテキストをトークンに分割
-#     doc = nlp(text)
-#     split_tokens = []
+def separate_words(text):
+    """
+    This function splits connected words into separate words using WordNinja,
+    while preserving punctuation marks as they are.
+    """
+    # テキストを句読点で分割し、それぞれの部分に処理を適用する
+    tokens = re.findall(r'\w+|\S', text)  # 単語と句読点を分離してリスト化
+    processed_tokens = []
 
-#     for token in doc:
-#         if token.is_alpha:  # 単語のみを処理
-#             split_tokens.extend(wordninja.split(token.text))
-#         else:
-#             split_tokens.append(token.text)
-    
-#     cleaned_text = ''
-#     for i, token in enumerate(split_tokens):
-#         if i > 0:
-#             if token in [',', '.', '!', '?', ':', ';']:
-#                 cleaned_text += token
-#             elif split_tokens[i - 1] == "'" or token.startswith("'"):
-#                 cleaned_text += token
-#             else:
-#                 cleaned_text += ' ' + token
-#         else:
-#             cleaned_text += token
+    for token in tokens:
+        if re.match(r'\w+', token):  # 単語部分のみ処理
+            processed_token = ' '.join(wordninja.split(token))
+            processed_tokens.append(processed_token)
+        else:  # 句読点はそのまま保持
+            processed_tokens.append(token)
 
-#     # ピリオドの後にアルファベットが続く場合にスペースを追加
-#     # cleaned_text = re.sub(r'(\.)([A-Za-z])', r'\1 \2', cleaned_text)
-
-#     return cleaned_text
+    # 処理されたトークンを結合して文字列を返す
+    return ''.join(processed_tokens)
 
 
 # def capitalize(sentence):

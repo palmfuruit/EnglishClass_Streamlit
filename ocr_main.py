@@ -10,6 +10,7 @@ import ocr_lib
 def initialize_ocr():
     return PaddleOCR(use_angle_cls=True, lang='en') # need to run only once to download and load model into memory
 
+
 def image_to_sentences(image, ocr_model):
     ocr_result = ocr_model.ocr(image, cls=False)
 
@@ -33,6 +34,10 @@ def image_to_sentences(image, ocr_model):
     line_height_average = int(line_height_sum / line_count)
     # print('1行の高さ: ', line_height_average)
     # print('Boxの数: ', line_count)
+
+
+    ### 単語間のスペースを補完
+    bounding_texts = [ocr_lib.separate_words(text) for text in bounding_texts]
 
 
     ### 近くのBox(同じ吹き出し)をマージ
@@ -60,8 +65,7 @@ def image_to_sentences(image, ocr_model):
     murged_texts = [s for s in murged_texts if re.search('[a-zA-Z]', s)]
 
 
-    ### 単語の分割
-    # murged_texts = list(map(ocr_lib.separate_words, murged_texts))
+
 
     ### 文章ごとに分割
     # sentences = []
