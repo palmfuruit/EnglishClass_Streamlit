@@ -120,8 +120,7 @@ def get_span_color(span_type):
 
 # 下線スタイルを適用する関数
 def apply_underline(text, color):
-    return f"<u style='text-decoration-color:{color}; text-decoration-thickness:2pt;'>{text}</u>"
-
+    return f"<span style='border-bottom: 2pt solid {color}; position: relative;'>{text}</span>"
 
 
 # 主語、動詞、目的語、補語に下線を引く関数
@@ -133,7 +132,11 @@ def underline_clauses(text, doc):
                 verb = word.text
                 color = get_span_color("verb")
                 underlined_text = underlined_text.replace(verb, apply_underline(verb, color), 1)
-            elif word.deprel == "nsubj":  # 主語
+            elif word.head == 0:  # ROOT (主節の動詞)
+                verb = word.text
+                color = get_span_color("verb")
+                underlined_text = underlined_text.replace(verb, apply_underline(verb, color), 1)
+            elif "subj" in word.deprel:  # 主語
                 subject = word.text
                 color = get_span_color("subject")
                 underlined_text = underlined_text.replace(subject, apply_underline(subject, color), 1)
