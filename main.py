@@ -129,6 +129,7 @@ def extract_target_tokens(doc):
     
     for sentence in doc.sentences:
         root_id = next((word.id for word in sentence.words if word.head == 0), None)
+        root_word = next((word for word in sentence.words if word.head == 0), None)
 
         for i, word in enumerate(sentence.words):
             span_type = None
@@ -147,14 +148,21 @@ def extract_target_tokens(doc):
                 span_type = "object"
             elif (word.head == root_id) and (word.deprel in ["iobj"]):
                 span_type = "indirect_object"
+            elif (word.head == root_id) and (root_word.pos == 'VERB') and (word.deprel == "ccomp"):
+                # ccompが存在する場合、そのccompを目的語として扱う
+                span_type = "object"
+                for ccomp_word in sentence.words:
+                    if ccomp_word.head == word.id:
+                        if ccomp_word.start_char < start_idx:
+                            start_idx = ccomp_word.start_char  # ccompが前にある場合、開始位置を更新
+                        else:
+                            end_idx = ccomp_word.end_char  # ccompが後にある場合、終了位置を更新
             elif (word.head == root_id) and (word.deprel in ["xcomp"]) and (word.pos in ['NOUN', 'PRON', 'ADJ']):
                 span_type = "objective_complement"       
 
             # 名詞が対象の場合、冠詞のチェックを行う
             if word.pos =='NOUN':
-                # 名詞に関連する冠詞をチェック
                 for det in sentence.words:
-                    # if det.pos == 'DET' and det.head == word.id:
                     if (det.pos == 'DET' and det.head == word.id) or \
                        (det.pos == 'PRON' and det.deprel == 'nmod:poss' and det.head == word.id):
                         start_idx = det.start_char  # 開始位置を冠詞の位置に変更
