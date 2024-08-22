@@ -123,50 +123,60 @@ def apply_underline(text, color):
     return f"<span style='border-bottom: 2pt solid {color}; position: relative;'>{text}</span>"
 
 
-# 主語、動詞、目的語、補語に下線を引く関数
-def underline_clauses(text, doc):
-    underlined_text = text
+def extract_target_tokens(doc):
+    target_tokens = []
     
     for sentence in doc.sentences:
         root_id = next((word.id for word in sentence.words if word.head == 0), None)
 
         for word in sentence.words:
+            span_type = None
+
             if (word.head == 0) and (word.pos == 'VERB'):
-                # ROOT (主節の動詞)
-                verb = word.text
-                color = get_span_color("verb")
-                underlined_text = underlined_text.replace(verb, apply_underline(verb, color), 1)
-            if (word.head == 0) and (word.pos in ['NOUN', 'PRON', 'ADJ']):
-                # ROOT (名詞 or 形容詞)
-                complement = word.text
-                color = get_span_color("complement")
-                underlined_text = underlined_text.replace(complement, apply_underline(complement, color), 1)
+                span_type = "verb"
+            elif (word.head == 0) and (word.pos in ['NOUN', 'PRON', 'ADJ']):
+                span_type = "complement"
             elif (word.head == root_id) and (word.pos == 'AUX'):
-                # 助動詞
-                auxiliary = word.text
-                color = get_span_color("auxiliary")
-                underlined_text = underlined_text.replace(auxiliary, apply_underline(auxiliary, color), 1)
+                span_type = "auxiliary"
             elif (word.head == root_id) and ("subj" in word.deprel):
-                # 主語
-                subject = word.text
-                color = get_span_color("subject")
-                underlined_text = underlined_text.replace(subject, apply_underline(subject, color), 1)
+                span_type = "subject"
             elif (word.head == root_id) and (word.deprel in ["obj"]):
-                # 目的語
-                obj = word.text
-                color = get_span_color("object")
-                underlined_text = underlined_text.replace(obj, apply_underline(obj, color), 1)
+                span_type = "object"
             elif (word.head == root_id) and (word.deprel in ["iobj"]):
-                # 間接目的語
-                indirect_object = word.text
-                color = get_span_color("indirect_object")
-                underlined_text = underlined_text.replace(indirect_object, apply_underline(indirect_object, color), 1)
-            # elif word.deprel in ["xcomp", "ccomp"]:
-            #     # 補語
-            #     complement = word.text
-            #     color = get_span_color("complement")
-            #     underlined_text = underlined_text.replace(complement, apply_underline(complement, color), 1)
-    return underlined_text
+                span_type = "indirect_object"
+            
+            if span_type:
+                color = get_span_color(span_type)
+                target_tokens.append({
+                    "text": word.text,
+                    "start_idx": word.start_char,
+                    "end_idx": word.end_char,
+                    "type": span_type,
+                    "color": color
+                })
+
+    return target_tokens
+
+
+def apply_underline_to_text(text, target_tokens):
+    underlined_text = list(text)  # 文字列をリストに変換して操作しやすくする
+    
+    for token in target_tokens:
+        start_idx = token["start_idx"]
+        end_idx = token["end_idx"]
+        color = token["color"]
+
+        underlined_text[start_idx] = apply_underline(''.join(underlined_text[start_idx:end_idx]), color)
+        for i in range(start_idx + 1, end_idx):
+            underlined_text[i] = ''  # 一度適用した部分を消す
+
+    return ''.join(underlined_text)
+
+
+# 主語、動詞、目的語、補語に下線を引く関数
+def underline_clauses(text, doc):
+    target_tokens = extract_target_tokens(doc)
+    return apply_underline_to_text(text, target_tokens)
 
 
     
