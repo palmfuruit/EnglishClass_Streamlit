@@ -135,7 +135,8 @@ def extract_target_tokens(doc):
             start_idx = word.start_char
             end_idx = word.end_char
 
-            if (word.head == 0) and (word.pos == 'VERB'):
+            if (word.head == 0 and word.pos == 'VERB') or \
+               ((word.deprel == 'compound:prt') and (word.head == root_id) and (root_word.pos == 'VERB')):  # 句動詞
                 span_type = "verb"
             elif (word.head == 0) and (word.pos in ['NOUN', 'PRON','PROPN', 'ADJ']):
                 span_type = "complement"
@@ -183,7 +184,7 @@ def extract_target_tokens(doc):
                             start_idx = modifier.start_char
                             break
                 
-                # compound関係のチェック
+                # compound関係のチェック(例.  肩書-名前)
                 for related_word in sentence.words:
                     if related_word.head == word.id and related_word.deprel == 'compound':
                         if related_word.start_char < start_idx:
@@ -191,7 +192,7 @@ def extract_target_tokens(doc):
                         if related_word.end_char > end_idx:
                             end_idx = related_word.end_char
 
-            # 'flat' dependency の場合、同じ単語として扱う
+            # 'flat' dependency の場合、同じ単語として扱う (例.  苗字-名前)
             for related_word in sentence.words:
                 if related_word.head == word.id and related_word.deprel == 'flat':
                     end_idx = related_word.end_char 
