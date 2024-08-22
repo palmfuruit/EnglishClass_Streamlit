@@ -162,11 +162,13 @@ def extract_target_tokens(doc):
 
             # 名詞が対象の場合、冠詞のチェックを行う
             if word.pos in ['NOUN', 'PRON','PROPN']:
-                for det in sentence.words:
-                    if (det.pos == 'DET' and det.head == word.id) or \
-                       (det.pos == 'PRON' and det.deprel == 'nmod:poss' and det.head == word.id):
-                        start_idx = det.start_char  # 開始位置を冠詞の位置に変更
-                        break
+                for modifier in sentence.words:
+                    if (modifier.pos == 'DET' and modifier.head == word.id) or \
+                       (modifier.deprel == 'nmod:poss' and modifier.head == word.id) or \
+                       (modifier.deprel == 'nummod' and modifier.head == word.id):
+                        if modifier.start_char < start_idx:
+                            start_idx = modifier.start_char
+                            break
                 
                 # compound関係のチェック
                 for related_word in sentence.words:
