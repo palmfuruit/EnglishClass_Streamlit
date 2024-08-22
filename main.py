@@ -138,7 +138,7 @@ def extract_target_tokens(doc):
 
             if (word.head == 0) and (word.pos == 'VERB'):
                 span_type = "verb"
-            elif (word.head == 0) and (word.pos in ['NOUN', 'PRON', 'ADJ']):
+            elif (word.head == 0) and (word.pos in ['NOUN', 'PRON','PROPN', 'ADJ']):
                 span_type = "complement"
             elif (word.head == root_id) and (word.pos == 'AUX'):
                 span_type = "auxiliary"
@@ -157,16 +157,25 @@ def extract_target_tokens(doc):
                             start_idx = ccomp_word.start_char  # ccompが前にある場合、開始位置を更新
                         else:
                             end_idx = ccomp_word.end_char  # ccompが後にある場合、終了位置を更新
-            elif (word.head == root_id) and (word.deprel in ["xcomp"]) and (word.pos in ['NOUN', 'PRON', 'ADJ']):
+            elif (word.head == root_id) and (word.deprel in ["xcomp"]) and (word.pos in ['NOUN', 'PRON','PROPN', 'ADJ']):
                 span_type = "objective_complement"       
 
             # 名詞が対象の場合、冠詞のチェックを行う
-            if word.pos =='NOUN':
+            if word.pos in ['NOUN', 'PRON','PROPN']:
                 for det in sentence.words:
                     if (det.pos == 'DET' and det.head == word.id) or \
                        (det.pos == 'PRON' and det.deprel == 'nmod:poss' and det.head == word.id):
                         start_idx = det.start_char  # 開始位置を冠詞の位置に変更
                         break
+                
+                # compound関係のチェック
+                for related_word in sentence.words:
+                    if related_word.head == word.id and related_word.deprel == 'compound':
+                        print('related_word: ', related_word)
+                        if related_word.start_char < start_idx:
+                            start_idx = related_word.start_char
+                        else:
+                            end_idx = related_word.end_char
 
             # 'flat' dependency の場合、同じ単語として扱う
             for related_word in sentence.words:
