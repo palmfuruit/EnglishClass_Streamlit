@@ -33,12 +33,12 @@ def separate_words(text):
     return ''.join(processed_tokens)
 
 
-# def capitalize(sentence):
-#     new_sentence = sentence.capitalize()
-#     new_sentence = re.sub(r'\bi\b', 'I', new_sentence)
-#     new_sentence = re.sub(r'\bi\'', 'I\'', new_sentence)
+def capitalize(sentence):
+    new_sentence = sentence.capitalize()
+    # new_sentence = re.sub(r'\bi\b', 'I', new_sentence)
+    # new_sentence = re.sub(r'\bi\'', 'I\'', new_sentence)
 
-#     return new_sentence
+    return new_sentence
 
 
 # 2つの行が続いているかを判定

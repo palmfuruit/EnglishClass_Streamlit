@@ -36,10 +36,6 @@ def image_to_sentences(image, ocr_model):
     # print('Boxの数: ', line_count)
 
 
-    ### 単語間のスペースを補完
-    bounding_texts = [ocr_lib.separate_words(text) for text in bounding_texts]
-
-
     ### 近くのBox(同じ吹き出し)をマージ
     murged_texts = []
     next_lines = []
@@ -59,25 +55,21 @@ def image_to_sentences(image, ocr_model):
         # print(new_text)
 
 
-
     ### アルファベットを含まない要素を削除
     import re
     murged_texts = [s for s in murged_texts if re.search('[a-zA-Z]', s)]
 
-
-
+    ### 単語間のスペースを補完
+    bounding_texts = [ocr_lib.separate_words(text) for text in bounding_texts]
 
     ### 文章ごとに分割
     # sentences = []
     # for text in murged_texts:
     #     sentences += ocr_lib.split_into_sentences(text)
 
-    ### 先頭文字以外を小文字
-    # sentences = list(map(ocr_lib.capitalize, sentences))
-    # for s in sentences:
-    #     print(s)
+    ## 先頭文字以外を小文字
+    murged_texts = list(map(ocr_lib.capitalize, murged_texts))
 
-    # return sentences
     return murged_texts
 
 
