@@ -130,8 +130,10 @@ def extract_target_tokens(doc):
     for sentence in doc.sentences:
         root_id = next((word.id for word in sentence.words if word.head == 0), None)
 
-        for word in sentence.words:
+        for i, word in enumerate(sentence.words):
             span_type = None
+            start_idx = word.start_char
+            end_idx = word.end_char
 
             if (word.head == 0) and (word.pos == 'VERB'):
                 span_type = "verb"
@@ -146,13 +148,22 @@ def extract_target_tokens(doc):
             elif (word.head == root_id) and (word.deprel in ["iobj"]):
                 span_type = "indirect_object"
             elif (word.head == root_id) and (word.deprel in ["xcomp"]):
-                span_type = "objective_complement"            
+                span_type = "objective_complement"       
+
+            # 名詞が対象の場合、冠詞のチェックを行う
+            if word.pos =='NOUN':
+                # 名詞に関連する冠詞をチェック
+                for det in sentence.words:
+                    if det.pos == 'DET' and det.head == word.id:
+                        start_idx = det.start_char  # 開始位置を冠詞の位置に変更
+                        break
+
             if span_type:
                 color = get_span_color(span_type)
                 target_tokens.append({
-                    "text": word.text,
-                    "start_idx": word.start_char,
-                    "end_idx": word.end_char,
+                    "text": word.text,  
+                    "start_idx": start_idx,
+                    "end_idx":  end_idx,
                     "type": span_type,
                     "color": color
                 })
