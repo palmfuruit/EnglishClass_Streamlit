@@ -233,25 +233,29 @@ def translate(en_text):
 
 
 def get_token_info(doc):
-    token_data = {
-        "Text": [word.text for sentence in doc.sentences for word in sentence.words],
-        "Lemma": [word.lemma for sentence in doc.sentences for word in sentence.words],
-        "POS": [word.upos for sentence in doc.sentences for word in sentence.words],
-        "Dependency": [word.deprel for sentence in doc.sentences for word in sentence.words],
-        "Head": [
-            sentence.words[word.head - 1].text if 0 < word.head <= len(sentence.words) else 'ROOT'
-            for sentence in doc.sentences for word in sentence.words
-        ],
-        "Children": [
-            [child.text for child in sentence.words if child.head == word.id]
-            for sentence in doc.sentences for word in sentence.words
-        ],
-        # "Start": [word.start_char for sentence in doc.sentences for word in sentence.words],
-        # "End": [word.end_char for sentence in doc.sentences for word in sentence.words]
-    }
-    token_df = pd.DataFrame(token_data)
-    return token_df
+    tokens_info = []
 
+    for sentence in doc.sentences:
+        for word in sentence.words:
+            token_info = {
+                'Text': word.text,
+                'Lemma': word.lemma,
+                'POS': word.upos,
+                # 'XPOS': word.xpos,      # 言語固有の品詞タグ
+                'Dependency': word.deprel,
+                'Head': sentence.words[word.head - 1].text if 0 < word.head else 'ROOT',
+                'Children': [child.text for child in sentence.words if child.head == word.id],
+                # 'Feats': word.feats,
+                # 'Deps': word.deps,
+                # 'ID': word.id,
+                # 'Misc': word.misc
+            }
+            tokens_info.append(token_info)
+
+    
+    tokens_df = pd.DataFrame(tokens_info)
+
+    return tokens_df
 
 
 
