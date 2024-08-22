@@ -111,10 +111,10 @@ def get_span_color(span_type):
     colors = {
         'subject': 'blue',
         'verb': 'red',
+        'auxiliary': 'pink',
         'object': 'yellowgreen',
         'indirect_object': 'green',
         'complement': 'orange',
-        'auxiliary': 'pink'
     }
     return colors.get(span_type, 'black')
 
@@ -132,10 +132,10 @@ def underline_clauses(text, doc):
                 verb = word.text
                 color = get_span_color("verb")
                 underlined_text = underlined_text.replace(verb, apply_underline(verb, color), 1)
-            elif word.head == 0:  # ROOT (主節の動詞)
-                verb = word.text
-                color = get_span_color("verb")
-                underlined_text = underlined_text.replace(verb, apply_underline(verb, color), 1)
+            elif word.pos == 'AUX':
+                auxiliary = word.text
+                color = get_span_color("auxiliary")
+                underlined_text = underlined_text.replace(auxiliary, apply_underline(auxiliary, color), 1)
             elif "subj" in word.deprel:  # 主語
                 subject = word.text
                 color = get_span_color("subject")
