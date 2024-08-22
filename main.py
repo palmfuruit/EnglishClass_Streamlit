@@ -115,6 +115,7 @@ def get_span_color(span_type):
         'object': 'yellowgreen',
         'indirect_object': 'green',
         'complement': 'orange',
+        'objective_complement': 'brown',
     }
     return colors.get(span_type, 'black')
 
@@ -144,7 +145,8 @@ def extract_target_tokens(doc):
                 span_type = "object"
             elif (word.head == root_id) and (word.deprel in ["iobj"]):
                 span_type = "indirect_object"
-            
+            elif (word.head == root_id) and (word.deprel in ["xcomp"]):
+                span_type = "objective_complement"            
             if span_type:
                 color = get_span_color(span_type)
                 target_tokens.append({
@@ -300,6 +302,7 @@ def display_legend():
         <p><span style='border-bottom: 2px solid yellowgreen; display: inline-block; width: 80px;'></span> 目的語 (Object)</p>
         <p><span style='border-bottom: 2px solid green; display: inline-block; width: 80px;'></span> 間接目的語 (Indirect Object)</p>
         <p><span style='border-bottom: 2px solid orange; display: inline-block; width: 80px;'></span> 補語 (Complement)</p>
+        <p><span style='border-bottom: 2px solid brown; display: inline-block; width: 80px;'></span> 目的語補語 (Objective Complement)</p>
     </div>
     """
     st.markdown(legend_html, unsafe_allow_html=True)
