@@ -158,8 +158,12 @@ def extract_target_tokens(doc):
                         if ccomp_word.end_char > end_idx:
                             end_idx = ccomp_word.end_char  # ccompが後にある場合、終了位置を更新
             elif (word.head in [w.id for w in sentence.words if w.deprel == "xcomp" and w.head == root_id]) and (word.deprel == "obj"):
-                # xcompがrootの動詞に接続していて、そのxcompがobjを持つ場合、目的語として扱う
-                span_type = "object"
+                # xcompがrootの動詞に接続していて、そのxcompがobjを持つ場合、目的語または目的語補語として扱う
+                other_obj_exists = any((w.deprel == "obj") and (w.head == root_id) and (root_word.pos == 'VERB') for w in sentence.words)
+                if other_obj_exists:
+                    span_type = "objective_complement"
+                else:
+                    span_type = "object"
                 xcomp_word = next(w for w in sentence.words if w.id == word.head)
                 start_idx = min(start_idx, xcomp_word.start_char)
                 end_idx = max(end_idx, xcomp_word.end_char)
