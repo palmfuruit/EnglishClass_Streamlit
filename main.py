@@ -157,16 +157,21 @@ def extract_target_tokens(doc):
                             start_idx = ccomp_word.start_char  # ccompが前にある場合、開始位置を更新
                         if ccomp_word.end_char > end_idx:
                             end_idx = ccomp_word.end_char  # ccompが後にある場合、終了位置を更新
-            elif (word.head in [w.id for w in sentence.words if w.deprel == "xcomp" and w.head == root_id]) and (word.deprel == "obj"):
-                # xcompがrootの動詞に接続していて、そのxcompがobjを持つ場合、目的語または目的語補語として扱う
-                other_obj_exists = any((w.deprel == "obj") and (w.head == root_id) and (root_word.pos == 'VERB') for w in sentence.words)
+            # elif (word.head in [w.id for w in sentence.words if w.deprel == "xcomp" and w.head == root_id]) and (word.deprel == "obj"):
+            elif (word.head == root_id) and (root_word.pos == 'VERB') and (word.deprel == "xcomp"):
+                # xcompがrootの動詞に接続していて、そのxcompがobjを持つ場合、xcompの節を目的語または目的語補語として扱う
+                other_obj_exists = any((w.deprel in ["obj", "iobj"]) and (w.head == root_id) and (root_word.pos == 'VERB') for w in sentence.words)
                 if other_obj_exists:
                     span_type = "objective_complement"
                 else:
                     span_type = "object"
-                xcomp_word = next(w for w in sentence.words if w.id == word.head)
-                start_idx = min(start_idx, xcomp_word.start_char)
-                end_idx = max(end_idx, xcomp_word.end_char)
+                # xcompトークンと、それに関連するトークンの範囲を含める
+                start_idx = min(start_idx, word.start_char)
+                end_idx = max(end_idx, word.end_char)
+                for related_word in sentence.words:
+                    if related_word.head == word.id:
+                        start_idx = min(start_idx, related_word.start_char)
+                        end_idx = max(end_idx, related_word.end_char)
             elif (word.head == root_id) and (word.deprel in ["xcomp"]) and (word.pos in ['NOUN', 'PRON','PROPN', 'ADJ']):
                 span_type = "objective_complement"
                 
