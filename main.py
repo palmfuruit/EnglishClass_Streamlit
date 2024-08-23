@@ -408,11 +408,14 @@ def main():
         # st.write(pred_labels_html, unsafe_allow_html=True)
         
 
-        # # 主語や動詞にアンダーラインを引く
         doc = get_nlp_doc(selected_text)
         main_clause_sentence = underline_clauses(selected_text, doc)
         st.markdown(main_clause_sentence, unsafe_allow_html=True)
 
+        # if st.checkbox("下線を表示"):
+        #     st.markdown(main_clause_sentence, unsafe_allow_html=True)
+        # else:
+        #     st.write(selected_text)
 
         # # 文型
         # spans = extract_spans(doc)
