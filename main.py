@@ -123,7 +123,7 @@ def get_span_color(span_type):
 def apply_underline(text, color):
     return f"<span style='border-bottom: 2pt solid {color}; position: relative;'>{text}</span>"
 
-def expand_span(word, sentence):
+def expand_span(word, parent_word, sentence):
     start_idx = word.start_char
     end_idx = word.end_char
     
@@ -138,7 +138,8 @@ def expand_span(word, sentence):
                     end_idx = related_word.end_char 
     
     # 親が節の場合 子の範囲も下線を引く
-    if word.deprel in ["xcomp", "ccomp"]:
+    if (word.deprel in ["xcomp", "ccomp"]) or \
+       (word.deprel in ["conj", "appos"] and parent_word.deprel in ["xcomp", "ccomp"]):
         for related_word in sentence.words:
             if(related_word.head == word.id):
                 if related_word.start_char < start_idx:
@@ -191,7 +192,7 @@ def extract_target_tokens(doc):
                 span_type = "objective_complement"
                 
             if span_type:
-                start_idx, end_idx = expand_span(word, sentence)
+                start_idx, end_idx = expand_span(word, root_word, sentence)
 
                 color = get_span_color(span_type)
                 target_tokens.append({
@@ -205,7 +206,7 @@ def extract_target_tokens(doc):
                 # conjの処理を追加
                 for related_word in sentence.words:
                     if related_word.deprel in ["conj", "appos"] and related_word.head == word.id:
-                        conj_start_idx, conj_end_idx = expand_span(related_word, sentence)
+                        conj_start_idx, conj_end_idx = expand_span(related_word, word, sentence)
 
                         color = get_span_color(span_type)
                         target_tokens.append({
