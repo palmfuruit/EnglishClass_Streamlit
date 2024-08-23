@@ -149,29 +149,14 @@ def extract_target_tokens(doc):
             elif (word.head == root_id) and (word.deprel in ["iobj"]):
                 span_type = "indirect_object"
             elif (word.head == root_id) and (root_word.pos == 'VERB') and (word.deprel == "ccomp"):
-                # ccompが存在する場合、そのccompを目的語として扱う
                 span_type = "object"
-                for ccomp_word in sentence.words:
-                    if ccomp_word.head == word.id:
-                        if ccomp_word.start_char < start_idx:
-                            start_idx = ccomp_word.start_char  # ccompが前にある場合、開始位置を更新
-                        if ccomp_word.end_char > end_idx:
-                            end_idx = ccomp_word.end_char  # ccompが後にある場合、終了位置を更新
-            # elif (word.head in [w.id for w in sentence.words if w.deprel == "xcomp" and w.head == root_id]) and (word.deprel == "obj"):
             elif (word.head == root_id) and (root_word.pos == 'VERB') and (word.deprel == "xcomp"):
-                # xcompがrootの動詞に接続していて、そのxcompがobjを持つ場合、xcompの節を目的語または目的語補語として扱う
+                # xcompがrootの動詞に接続していて、そのxcompがobjを持つ場合、目的語または目的語補語として扱う
                 other_obj_exists = any((w.deprel in ["obj", "iobj"]) and (w.head == root_id) and (root_word.pos == 'VERB') for w in sentence.words)
                 if other_obj_exists:
                     span_type = "objective_complement"
                 else:
                     span_type = "object"
-                # xcompトークンと、それに関連するトークンの範囲を含める
-                start_idx = min(start_idx, word.start_char)
-                end_idx = max(end_idx, word.end_char)
-                for related_word in sentence.words:
-                    if related_word.head == word.id:
-                        start_idx = min(start_idx, related_word.start_char)
-                        end_idx = max(end_idx, related_word.end_char)
             elif (word.head == root_id) and (word.deprel in ["xcomp"]) and (word.pos in ['NOUN', 'PRON','PROPN', 'ADJ']):
                 span_type = "objective_complement"
                 
@@ -194,17 +179,27 @@ def extract_target_tokens(doc):
                                 start_idx = related_word.start_char
                             if related_word.end_char > end_idx:
                                 end_idx = related_word.end_char 
-                        
-                # compound関係のチェック(例.  肩書-名前)
-                # 'flat' dependency の場合、同じ単語として扱う (例.  苗字-名前)
+                
+                # 親が節の場合 子の範囲も下線を引く
+                if word.deprel in ["xcomp", "ccomp"]:
+                    for related_word in sentence.words:
+                        if(related_word.head == word.id):
+                            if related_word.start_char < start_idx:
+                                start_idx = related_word.start_char
+                            if related_word.end_char > end_idx:
+                                end_idx = related_word.end_char                        
+
+                # 元が何であっても、子がcompound, flatの場合は範囲を拡張
+                # compound (例.  肩書-名前)
+                # 'flat'  (例.  苗字-名前)
                 for related_word in sentence.words:
-                    if related_word.head == word.id and related_word.deprel in['compound', 'flat']:
+                    if(related_word.head == word.id) and (related_word.deprel in['compound', 'flat']):
                         if related_word.start_char < start_idx:
                             start_idx = related_word.start_char
                         if related_word.end_char > end_idx:
                             end_idx = related_word.end_char
                 
-                
+
 
                 color = get_span_color(span_type)
                 target_tokens.append({
