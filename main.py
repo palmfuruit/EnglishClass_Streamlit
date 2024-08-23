@@ -187,14 +187,14 @@ def extract_target_tokens(doc):
             if span_type:
                 # 名詞が対象の場合、冠詞のチェックを行う
                 if word.pos in ['NOUN', 'PRON','PROPN']:
-                    for modifier in sentence.words:
-                        if (modifier.pos == 'DET' and modifier.head == word.id) or \
-                        (modifier.deprel == 'nmod:poss' and modifier.head == word.id) or \
-                        (modifier.deprel == 'nummod' and modifier.head == word.id):
-                            if modifier.start_char < start_idx:
-                                start_idx = modifier.start_char
-                                break
-                    
+                    for related_word in sentence.words:
+                        if(related_word.head == word.id) and \
+                        ((related_word.pos == 'DET') or (related_word.deprel == 'nmod:poss') or (related_word.deprel == 'nummod') or(related_word.deprel == 'nmod')):
+                            if related_word.start_char < start_idx:
+                                start_idx = related_word.start_char
+                            if related_word.end_char > end_idx:
+                                end_idx = related_word.end_char 
+                        
                 # compound関係のチェック(例.  肩書-名前)
                 # 'flat' dependency の場合、同じ単語として扱う (例.  苗字-名前)
                 for related_word in sentence.words:
@@ -203,6 +203,8 @@ def extract_target_tokens(doc):
                             start_idx = related_word.start_char
                         if related_word.end_char > end_idx:
                             end_idx = related_word.end_char
+                
+                
 
                 color = get_span_color(span_type)
                 target_tokens.append({
