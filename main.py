@@ -123,6 +123,39 @@ def get_span_color(span_type):
 def apply_underline(text, color):
     return f"<span style='border-bottom: 2pt solid {color}; position: relative;'>{text}</span>"
 
+def expand_span(word, sentence):
+    start_idx = word.start_char
+    end_idx = word.end_char
+    
+    # 名詞が対象の場合、冠詞や所有格のチェックを行う
+    if word.pos in ['NOUN', 'PRON','PROPN']:
+        for related_word in sentence.words:
+            if(related_word.head == word.id) and \
+            ((related_word.pos == 'DET') or (related_word.deprel == 'nmod:poss') or (related_word.deprel == 'nummod') or (related_word.deprel == 'nmod')):
+                if related_word.start_char < start_idx:
+                    start_idx = related_word.start_char
+                if related_word.end_char > end_idx:
+                    end_idx = related_word.end_char 
+    
+    # 親が節の場合 子の範囲も下線を引く
+    if word.deprel in ["xcomp", "ccomp"]:
+        for related_word in sentence.words:
+            if(related_word.head == word.id):
+                if related_word.start_char < start_idx:
+                    start_idx = related_word.start_char
+                if related_word.end_char > end_idx:
+                    end_idx = related_word.end_char 
+    
+    # 子がcompound, flatの場合は範囲を拡張
+    for related_word in sentence.words:
+        if(related_word.head == word.id) and (related_word.deprel in['compound', 'flat']):
+            if related_word.start_char < start_idx:
+                start_idx = related_word.start_char
+            if related_word.end_char > end_idx:
+                end_idx = related_word.end_char
+                
+    return start_idx, end_idx
+
 def extract_target_tokens(doc):
     target_tokens = []
     
@@ -132,8 +165,6 @@ def extract_target_tokens(doc):
 
         for i, word in enumerate(sentence.words):
             span_type = None
-            start_idx = word.start_char
-            end_idx = word.end_char
 
             if (word.head == 0 and word.pos == 'VERB') or \
                ((word.deprel == 'compound:prt') and (word.head == root_id) and (root_word.pos == 'VERB')):  # 句動詞
@@ -151,7 +182,6 @@ def extract_target_tokens(doc):
             elif (word.head == root_id) and (root_word.pos == 'VERB') and (word.deprel == "ccomp"):
                 span_type = "object"
             elif (word.head == root_id) and (root_word.pos == 'VERB') and (word.deprel == "xcomp"):
-                # xcompがrootの動詞に接続していて、そのxcompがobjを持つ場合、目的語または目的語補語として扱う
                 other_obj_exists = any((w.deprel in ["obj", "iobj"]) and (w.head == root_id) and (root_word.pos == 'VERB') for w in sentence.words)
                 if other_obj_exists:
                     span_type = "objective_complement"
@@ -160,46 +190,8 @@ def extract_target_tokens(doc):
             elif (word.head == root_id) and (word.deprel in ["xcomp"]) and (word.pos in ['NOUN', 'PRON','PROPN', 'ADJ']):
                 span_type = "objective_complement"
                 
-                # objective_complementのheadに対応するトークンを含める
-                for related_word in sentence.words:
-                    if related_word.head == word.id:
-                        if related_word.start_char < start_idx:
-                            start_idx = related_word.start_char
-                        if related_word.end_char > end_idx:
-                            end_idx = related_word.end_char       
-
-            ## 語句の範囲拡張
             if span_type:
-                # 名詞が対象の場合、冠詞のチェックを行う
-                if word.pos in ['NOUN', 'PRON','PROPN']:
-                    for related_word in sentence.words:
-                        if(related_word.head == word.id) and \
-                        ((related_word.pos == 'DET') or (related_word.deprel == 'nmod:poss') or (related_word.deprel == 'nummod') or(related_word.deprel == 'nmod')):
-                            if related_word.start_char < start_idx:
-                                start_idx = related_word.start_char
-                            if related_word.end_char > end_idx:
-                                end_idx = related_word.end_char 
-                
-                # 親が節の場合 子の範囲も下線を引く
-                if word.deprel in ["xcomp", "ccomp"]:
-                    for related_word in sentence.words:
-                        if(related_word.head == word.id):
-                            if related_word.start_char < start_idx:
-                                start_idx = related_word.start_char
-                            if related_word.end_char > end_idx:
-                                end_idx = related_word.end_char                        
-
-                # 元が何であっても、子がcompound, flatの場合は範囲を拡張
-                # compound (例.  肩書-名前)
-                # 'flat'  (例.  苗字-名前)
-                for related_word in sentence.words:
-                    if(related_word.head == word.id) and (related_word.deprel in['compound', 'flat']):
-                        if related_word.start_char < start_idx:
-                            start_idx = related_word.start_char
-                        if related_word.end_char > end_idx:
-                            end_idx = related_word.end_char
-                
-
+                start_idx, end_idx = expand_span(word, sentence)
 
                 color = get_span_color(span_type)
                 target_tokens.append({
@@ -209,8 +201,23 @@ def extract_target_tokens(doc):
                     "type": span_type,
                     "color": color
                 })
+                
+                # conjの処理を追加
+                for related_word in sentence.words:
+                    if related_word.deprel in ["conj", "appos"] and related_word.head == word.id:
+                        conj_start_idx, conj_end_idx = expand_span(related_word, sentence)
+
+                        color = get_span_color(span_type)
+                        target_tokens.append({
+                            "text": related_word.text,
+                            "start_idx": conj_start_idx,
+                            "end_idx": conj_end_idx,
+                            "type": span_type,
+                            "color": color
+                        })
 
     return target_tokens
+
 
 
 
