@@ -130,8 +130,8 @@ def expand_span(word, parent_word, sentence):
     # 名詞が対象の場合、冠詞や所有格のチェックを行う
     if word.pos in ['NOUN', 'PRON','PROPN']:
         for related_word in sentence.words:
-            if(related_word.head == word.id) and \
-            ((related_word.pos == 'DET') or (related_word.deprel == 'nmod:poss') or (related_word.deprel == 'nummod') or (related_word.deprel == 'nmod')):
+            if(related_word.head == word.id) and (related_word.start_char is not None) and \
+            ((related_word.pos == 'DET') or (related_word.deprel == 'nmod:poss') or (related_word.deprel == 'nummod') or (related_word.deprel == 'nmod') or (related_word.deprel == 'amod')):
                 if related_word.start_char < start_idx:
                     start_idx = related_word.start_char
                 if related_word.end_char > end_idx:
@@ -141,7 +141,7 @@ def expand_span(word, parent_word, sentence):
     if (word.deprel in ["xcomp", "ccomp"]) or \
        (word.deprel in ["conj", "appos"] and parent_word.deprel in ["xcomp", "ccomp"]):
         for related_word in sentence.words:
-            if(related_word.head == word.id):
+            if(related_word.head == word.id) and (related_word.start_char is not None):
                 if related_word.start_char < start_idx:
                     start_idx = related_word.start_char
                 if related_word.end_char > end_idx:
@@ -149,7 +149,7 @@ def expand_span(word, parent_word, sentence):
     
     # 子がcompound, flatの場合は範囲を拡張
     for related_word in sentence.words:
-        if(related_word.head == word.id) and (related_word.deprel in['compound', 'flat']):
+        if(related_word.head == word.id) and (related_word.deprel in['compound', 'flat']) and (related_word.start_char is not None):
             if related_word.start_char < start_idx:
                 start_idx = related_word.start_char
             if related_word.end_char > end_idx:
@@ -205,7 +205,7 @@ def extract_target_tokens(doc):
                 
                 # conjの処理を追加
                 for related_word in sentence.words:
-                    if related_word.deprel in ["conj", "appos"] and related_word.head == word.id:
+                    if related_word.deprel in ["conj"] and related_word.head == word.id:
                         conj_start_idx, conj_end_idx = expand_span(related_word, word, sentence)
 
                         color = get_span_color(span_type)
