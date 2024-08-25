@@ -38,7 +38,7 @@ def initialize_session_state():
 
 # Stanzaのセットアップと文の解析
 def setup_stanza():
-    stanza.download('en')  # Stanzaの英語モデルをダウンロード
+    stanza.download('en', verbose=False) # Stanzaの英語モデルをダウンロード
     return stanza.Pipeline('en')  # パイプラインの初期化
 
 # 画像ファイルUpload
@@ -277,7 +277,7 @@ def determine_sentence_pattern(spans):
 
 grammer_labels = [
     '受動態',
-    '完了形'
+    '完了形',
     '比較',
     '仮定法',
     '使役',
