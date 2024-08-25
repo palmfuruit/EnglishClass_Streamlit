@@ -277,11 +277,11 @@ def determine_sentence_pattern(spans):
 
 grammer_labels = [
     '受動態',
+    '完了形'
     '比較',
     '仮定法',
     '使役',
-    '関係代名詞',
-    '関係副詞'
+    'WH名詞節',
 ]
 
 # 文法ラベルにそれぞれの文法に適合している文の数を追加する関数
@@ -394,8 +394,8 @@ def main():
             doc = st.session_state.nlp(text_input)
             st.session_state.sentences = [sentence.text for sentence in doc.sentences]
 
-    # if st.session_state.sentences:
-    #     st.session_state.response_data = predict_grammer_label(st.session_state.sentences)
+    if st.session_state.sentences:
+        st.session_state.response_data = predict_grammer_label(st.session_state.sentences)
 
     # 文の選択
     selected_text = select_text_to_read()
@@ -403,9 +403,9 @@ def main():
 
     st.divider() # 水平線
     if selected_text:
-        # # 英文が該当する文法を表示 (仮定法、比較級、・・・)        
-        # pred_labels_html = sentence_to_grammer_label(selected_text)
-        # st.write(pred_labels_html, unsafe_allow_html=True)
+        # 英文が該当する文法を表示 (仮定法、比較級、・・・)        
+        pred_labels_html = sentence_to_grammer_label(selected_text)
+        st.write(pred_labels_html, unsafe_allow_html=True)
         
 
         doc = get_nlp_doc(selected_text)
