@@ -88,6 +88,15 @@ def select_text_to_read():
     return selected_text
 
 
+### 文章の分割
+from textblob import TextBlob
+
+def split_into_sentences(text):
+    blob = TextBlob(text)
+    sentence_list = blob.sentences
+    sentence_list = [str(sentence) for sentence in sentence_list]
+
+    return sentence_list
 
 def get_subtree_span(token, sentence):
     start = token.start_char
@@ -390,9 +399,10 @@ def main():
         text_input = st.text_area("英語のテキストを入力してください:", height=300)
         if st.button("入力"):
             # 入力されたテキストをStanzaで文に分割して保持
+            print('====テキストを文章に分割 (start)')
             st.session_state.uploaded_image = None      # 前回アップロードした画像をクリア
-            doc = st.session_state.nlp(text_input)
-            st.session_state.sentences = [sentence.text for sentence in doc.sentences]
+            st.session_state.sentences = split_into_sentences(text_input)
+            print('====テキストを文章に分割 (end)')
 
     if st.session_state.sentences:
         st.session_state.response_data = predict_grammer_label(st.session_state.sentences)

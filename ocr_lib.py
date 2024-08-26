@@ -1,14 +1,3 @@
-# ### 文章の分割
-# from textblob import TextBlob
-
-# def split_into_sentences(text):
-#     blob = TextBlob(text)
-#     sentence_list = blob.sentences
-#     sentence_list = [str(sentence) for sentence in sentence_list]
-
-#     return sentence_list
-
-
 # ### スペースなしでつながっている単語を分割
 import wordninja
 import re
