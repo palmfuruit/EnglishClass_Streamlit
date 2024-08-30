@@ -8,7 +8,14 @@ import ocr_lib
 
 ### Functions ####
 def initialize_ocr():
-    return PaddleOCR(use_angle_cls=True, lang='en') # need to run only once to download and load model into memory
+    model_dir='./stanza_resources'
+    ocr = PaddleOCR(use_angle_cls=True,
+                    lang='en',
+                    det_model_dir='./paddleocr_resources/det_model',
+                    cls_model_dir='./paddleocr_resources/cls_model',
+                    rec_model_dir='./paddleocr_resources/rec_model',
+    )
+    return ocr 
 
 
 def image_to_sentences(image, ocr_model):
