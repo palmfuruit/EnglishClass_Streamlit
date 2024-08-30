@@ -38,7 +38,7 @@ def initialize_session_state():
 
 # Stanzaのセットアップと文の解析
 def setup_stanza():
-    stanza.download('en', verbose=False) # Stanzaの英語モデルをダウンロード
+    # stanza.download('en', verbose=False) # Stanzaの英語モデルをダウンロード
     return stanza.Pipeline('en')  # パイプラインの初期化
 
 # 画像ファイルUpload
@@ -417,10 +417,11 @@ def main():
         pred_labels_html = sentence_to_grammer_label(selected_text)
         st.write(pred_labels_html, unsafe_allow_html=True)
         
-
+        print(' 下線処理 (Start) ')
         doc = get_nlp_doc(selected_text)
         main_clause_sentence = underline_clauses(selected_text, doc)
         st.markdown(main_clause_sentence, unsafe_allow_html=True)
+        print(' 下線処理 (End) ')
 
         # if st.checkbox("下線を表示"):
         #     st.markdown(main_clause_sentence, unsafe_allow_html=True)
