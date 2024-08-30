@@ -42,7 +42,7 @@ def initialize_session_state():
 # Stanzaのセットアップと文の解析
 def setup_stanza():
     # stanza.download('en', verbose=False, model_dir='./stanza_resources')
-    return stanza.Pipeline('en', model_dir='./stanza_resources')  # パイプラインの初期化
+    return stanza.Pipeline('en', model_dir='./stanza_resources', download_method=stanza.pipeline.core.DownloadMethod.REUSE_RESOURCES)  # パイプラインの初期化
 
 # 画像ファイルUpload
 def on_file_upload():
