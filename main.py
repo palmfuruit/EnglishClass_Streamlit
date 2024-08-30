@@ -93,6 +93,11 @@ def select_text_to_read():
 
 ### 文章の分割
 from textblob import TextBlob
+import nltk
+
+nltk.data.path.append('./textblob_resources')
+# nltk.download('punkt', download_dir='./textblob_resources')
+# nltk.download('averaged_perceptron_tagger', download_dir='./textblob_resources')
 
 def split_into_sentences(text):
     blob = TextBlob(text)
