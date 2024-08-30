@@ -41,8 +41,8 @@ def initialize_session_state():
 
 # Stanzaのセットアップと文の解析
 def setup_stanza():
-    stanza.download('en', verbose=False) # Stanzaの英語モデルをダウンロード
-    return stanza.Pipeline('en')  # パイプラインの初期化
+    # stanza.download('en', verbose=False, model_dir='./stanza_resources')
+    return stanza.Pipeline('en', model_dir='./stanza_resources')  # パイプラインの初期化
 
 # 画像ファイルUpload
 def on_file_upload():
