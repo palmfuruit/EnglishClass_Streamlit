@@ -15,7 +15,7 @@ for i in range(6):  # ラベルの数だけループ
 
 # Stanzaの準備（予測時にも必要）
 import stanza
-stanza.download('en', verbose=False) # Stanzaの英語モデルをダウンロード
+# stanza.download('en', verbose=False) # Stanzaの英語モデルをダウンロード
 nlp = stanza.Pipeline('en')
 
 def analyze_sentence(sentence):

@@ -20,8 +20,8 @@ def initialize_session_state():
     if 'sentences' not in st.session_state:
         st.session_state.sentences = []
     
-    if 'response_data' not in st.session_state:
-        st.session_state.response_data = []
+    # if 'response_data' not in st.session_state:
+    #     st.session_state.response_data = []
 
     if 'nlp' not in st.session_state:
         # Stanzaの英語モデルをロードしてセッションステートに保存
@@ -41,7 +41,7 @@ def initialize_session_state():
 
 # Stanzaのセットアップと文の解析
 def setup_stanza():
-    # stanza.download('en', verbose=False) # Stanzaの英語モデルをダウンロード
+    stanza.download('en', verbose=False) # Stanzaの英語モデルをダウンロード
     return stanza.Pipeline('en')  # パイプラインの初期化
 
 # 画像ファイルUpload
