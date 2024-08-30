@@ -2,15 +2,18 @@ import numpy as np
 import pandas as pd
 from PIL import Image, ImageDraw
 import streamlit as st
-import ocr_main
 import stanza
-import requests
+# import requests
 # import nltk
 # from nltk.tokenize import sent_tokenize
 from googletrans import Translator
 
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+
+import ocr_main
+import model
+
 
 # セッションステートの初期化
 def initialize_session_state():
@@ -307,16 +310,14 @@ def get_grammar_label_with_counts():
 
 @st.cache_data
 def predict_grammer_label(sentences):
-    print('--------- API Call Start --------')
-    if st.session_state.sentences:
-        api_url = "http://localhost:8000/predict"
-        data = {"text": sentences}
-        response = requests.post(api_url, json=data)
-        response.raise_for_status()
-        response_data = list(response.json())
-        # st.write(st.session_state.response_data)
-    print('--------- API Call End --------')
-    return response_data
+    
+    print('predict_grammer -- start --')
+    results = model.predict_labels(sentences)
+    if not results:
+        print("分類結果を取得できません。")
+    
+    print('predict_grammer -- end --')
+    return results
 
 @st.cache_data
 # 文が該当する文法を表示 (仮定法、比較級、・・・)
@@ -439,8 +440,8 @@ def main():
             st.write(translated_text)
         
         # トークン情報の表を出力 (開発用)
-        token_df = get_token_info(doc)
-        st.dataframe(token_df, width=1200)
+        # token_df = get_token_info(doc)
+        # st.dataframe(token_df, width=1200)
 
     # 凡例を表示
     display_legend()
