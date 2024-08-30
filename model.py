@@ -13,12 +13,8 @@ for i in range(6):  # ラベルの数だけループ
     model = lgb.Booster(model_file=f'./model/lightgbm_model_label_{i}.txt')
     models.append(model)
 
-# Stanzaの準備（予測時にも必要）
-import stanza
-# stanza.download('en', verbose=False) # Stanzaの英語モデルをダウンロード
-nlp = stanza.Pipeline('en')
 
-def analyze_sentence(sentence):
+def analyze_sentence(sentence, nlp):
     """テキストを解析し、Stanzaの解析結果をデータフレームに変換"""
     doc = nlp(sentence)
     data = []
@@ -69,11 +65,11 @@ def extract_features(analysis_df):
     
     return features
 
-def predict_labels(sentences):
+def predict_labels(sentences, nlp):
     features_list = []
     
     for sentence in sentences:
-        analysis_df = analyze_sentence(sentence)
+        analysis_df = analyze_sentence(sentence, nlp)
         features = extract_features(analysis_df)
         features_list.append(features)
 

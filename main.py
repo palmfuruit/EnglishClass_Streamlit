@@ -312,7 +312,7 @@ def get_grammar_label_with_counts():
 def predict_grammer_label(sentences):
     
     print('predict_grammer -- start --')
-    results = model.predict_labels(sentences)
+    results = model.predict_labels(sentences, st.session_state.nlp)
     if not results:
         print("分類結果を取得できません。")
     
