@@ -439,8 +439,8 @@ def main():
             st.write(translated_text)
         
         # トークン情報の表を出力 (開発用)
-        token_df = get_token_info(doc)
-        st.dataframe(token_df, width=1200)
+        # token_df = get_token_info(doc)
+        # st.dataframe(token_df, width=1200)
 
     # 凡例を表示
     display_legend()
